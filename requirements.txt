@@ -1,0 +1,1 @@
+git+git://github.com/bigscience-workshop/promptsource@0.1.0
