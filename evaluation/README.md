@@ -46,4 +46,4 @@ python run_eval.py \
     --parallelize
 ```
 
-Note that this feature is stil an experimental feature under 🤗 Transformers.
+Note that this feature is still an experimental feature under 🤗 Transformers.
