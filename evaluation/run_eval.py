@@ -390,9 +390,7 @@ def main():
     model.to(device)
 
     # Prepare everything with our `accelerator`.
-    model, eval_dataloader = accelerator.prepare(
-        model, eval_dataloader
-    )
+    eval_dataloader = accelerator.prepare(eval_dataloader)
 
 
     # Metrics
