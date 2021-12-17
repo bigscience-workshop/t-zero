@@ -132,6 +132,14 @@ def parse_args():
         action="store_true",
         help="Activate debug mode and run training only with a subset of data.",
     )
+    parser.add_argument(
+        "--parallelize",
+        action="store_true",
+        help=(
+            "If passed, will call `model.parallelize` which splits the model on all GPUs available when applicable (model parallelism). "
+            "Note that this feature is still experimental in HF Transformers."
+        ),
+    )
     args = parser.parse_args()
 
     return args
@@ -390,7 +398,11 @@ def main():
 
     # Use the device given by the `accelerator` object.
     device = accelerator.device
-    model.to(device)
+    if args.parallelize:
+        assert torch.cuda.is_available(), "You need at least 1 GPU to call `parallelize` (even though if there is only 1 GPU, there won't be any model parallelism)."
+        model.parallelize()
+    else:
+        model.to(device)
 
     # Prepare everything with our `accelerator`.
     eval_dataloader = accelerator.prepare(eval_dataloader)
