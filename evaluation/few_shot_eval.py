@@ -26,7 +26,8 @@ import random
 from dataclasses import dataclass
 from itertools import chain
 from typing import Optional, Union
-import json
+import csv
+import math
 
 import datasets
 import torch
@@ -42,6 +43,11 @@ from transformers import (
     AutoTokenizer,
     PreTrainedTokenizerBase,
     default_data_collator,
+    DataCollatorForSeq2Seq,
+    AdamW,
+    SchedulerType,
+    get_scheduler,
+    set_seed,
 )
 from transformers.file_utils import PaddingStrategy
 from promptsource.templates import DatasetTemplates
@@ -119,13 +125,79 @@ def parse_args():
         "--per_device_eval_batch_size",
         type=int,
         default=8,
-        help="Batch size (per device) for the evaluation dataloader.",
+        help="Batch size (per device) for the evaluation dataloader. Will be multiplied by the number of answer choices.",
+    )
+    parser.add_argument(
+        "-tb",
+        "--per_device_train_batch_size",
+        type=int,
+        default=8,
+        help="Batch size (per device) for the training dataloader.",
+    )
+    parser.add_argument(
+        "-ns",
+        "--num_shots",
+        type=int,
+        default=None,
+        help="Number of training examples for few-shot learning. Default is None, which uses the entire train set.",
+    )
+    parser.add_argument(
+        "-lr",
+        "--learning_rate",
+        type=float,
+        default=1e-4,
+        help="Initial learning rate (after the potential warmup period) to use.",
+    )
+    parser.add_argument(
+        "--weight_decay",
+        type=float,
+        default=0.01,
+        help="Weight decay for the AdamW optimizer."
+    )
+    parser.add_argument(
+        "-ep",
+        "--num_train_epochs",
+        type=int,
+        default=5,
+        help="Total number of training epochs to perform."
+    )
+    parser.add_argument(
+        "--max_train_steps",
+        type=int,
+        default=None,
+        help="Total number of training steps to perform. If provided, overrides num_train_epochs.",
+    )
+    parser.add_argument(
+        "-ga",
+        "--gradient_accumulation_steps",
+        type=int,
+        default=1,
+        help="Number of updates steps to accumulate before performing a backward/update pass.",
+    )
+    parser.add_argument(
+        "--lr_scheduler_type",
+        type=SchedulerType,
+        default="linear",
+        help="The scheduler type to use.",
+        choices=["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"],
+    )
+    parser.add_argument(
+        "--num_warmup_steps",
+        type=int,
+        default=0,
+        help="Number of steps for the warmup in the lr scheduler."
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Especially important for few-shot example sampling.",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
         default=None,
-        help="Where to store the final model."
+        help="Where to store the results CSV and (TODO) optionally the final model."
     )
     parser.add_argument(
         "--debug",
@@ -139,6 +211,13 @@ def parse_args():
             "If passed, will call `model.parallelize` which splits the model on all GPUs available when applicable (model parallelism). "
             "Note that this feature is still experimental in HF Transformers."
         ),
+    )
+    parser.add_argument(
+        "-wb",
+        "--wandb_proj",
+        type=str,
+        default=None,
+        help="Project name for Weights & Biases. By default, W&B is disabled.",
     )
     args = parser.parse_args()
 
@@ -223,6 +302,7 @@ class DataCollatorForMultipleChoice:
 
 def main():
     args = parse_args()
+    set_seed(args.seed)
 
     # Initialize the accelerator. We will let the accelerator handle device placement for us.
     accelerator = Accelerator()
@@ -255,16 +335,21 @@ def main():
     if args.dataset_name is not None:
         # Downloading and loading a dataset from the hub.
         if args.dataset_name == "anli":
-            raw_datasets = load_dataset(args.dataset_name, split=args.dataset_config_name)
+            raw_train_dataset = load_dataset(args.dataset_name, split=f'train_{args.dataset_config_name}')  # dataset_config_name = "r1", "r2", or "r3"
+            raw_eval_dataset = load_dataset(args.dataset_name, split=f'dev_{args.dataset_config_name}')
         else:
-            raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
+            raw_train_dataset = load_dataset(args.dataset_name, args.dataset_config_name, split="train")
+            raw_eval_dataset = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
+    else:
+        raise ValueError('Please specify `args.dataset_name` and `args.dataset_config_name` as appear in `promptsource`.')
     #TODO(Victor): enable loading pre-processed dataset from https://huggingface.co/datasets/bigscience/P3
 
     # Trim a number of evaluation examples
     if args.debug:
-        raw_datasets = raw_datasets.select(range(100))
+        raw_train_dataset = raw_train_dataset.select(range(100))
+        raw_eval_dataset = raw_eval_dataset.select(range(100))
 
-    column_names = raw_datasets.column_names
+    column_names = raw_eval_dataset.column_names
 
 
     # Load pretrained model and tokenizer
@@ -306,14 +391,54 @@ def main():
 
     # Get the prompt to apply and the possible targets.
     # TODO(Victor): If pulling from pre-processed data, remove this logic.
-    prompts = DatasetTemplates(
-        f"{args.dataset_name}"
-        if args.dataset_config_name is None
-        else f"{args.dataset_name}/{args.dataset_config_name}"
-    )
+    if args.dataset_name == 'anli':
+        prompts = DatasetTemplates('anli', None)
+    else:
+        prompts = DatasetTemplates(
+            f"{args.dataset_name}"
+            if args.dataset_config_name is None
+            else f"{args.dataset_name}/{args.dataset_config_name}"
+        )
     template = prompts[args.template_name]
 
-    def preprocess_function(examples):
+    def preprocess_train(examples):
+        bs = len(examples[column_names[0]])
+
+        input_texts = []
+        target_texts = []
+        for i in range(bs):
+            ex = {
+                k: examples[k][i]
+                for k in column_names
+            }
+            input, target = template.apply(ex)
+            ex_answer_choices = template.get_answer_choices_list(ex)
+            assert target in ex_answer_choices
+            input_texts.append(input)
+            target_texts.append(target)
+
+        model_inputs = tokenizer(
+            input_texts,
+            padding=padding,
+            max_length=args.max_length,
+            truncation=True,
+            add_special_tokens=False,
+        )
+
+        with tokenizer.as_target_tokenizer():
+            tokenized_targets = tokenizer(
+                target_texts,
+                padding=padding,
+                max_length=args.target_max_length,
+                truncation=True,
+            )
+            model_inputs['labels'] = [
+                [(t if t != tokenizer.pad_token_id else -100) for t in targets]
+                for targets in tokenized_targets["input_ids"]
+            ]
+        return model_inputs
+
+    def preprocess_eval(examples):
         bs = len(examples[column_names[0]])
 
         input_texts = []
@@ -372,89 +497,202 @@ def main():
         return features
 
     with accelerator.main_process_first():
-        eval_dataset = raw_datasets.map(
-            preprocess_function, batched=True, remove_columns=column_names
-        )
+        eval_dataset = raw_eval_dataset.map(preprocess_eval, batched=True, remove_columns=column_names)
 
-    # Log a few random samples from the eval set:
+        if args.num_shots is not None:
+            max_index = len(raw_train_dataset) - args.num_shots
+            start_index = random.randint(0, max_index)
+            sample_indices = range(start_index, start_index + args.num_shots)
+            raw_train_dataset = raw_train_dataset.select(sample_indices)
+        train_dataset = raw_train_dataset.map(preprocess_train, batched=True, remove_columns=column_names)
+
+    # Log a few random examples:
+    for index in random.sample(range(len(train_dataset)), 3):
+        logger.debug(f"Sample {index} of the training set: {train_dataset[index]}.")
     for index in random.sample(range(len(eval_dataset)), 3):
-        logger.info(f"Sample {index} of the training set: {eval_dataset[index]}.")
+        logger.debug(f"Sample {index} of the evaluation set: {eval_dataset[index]}.")
 
     # DataLoaders creation:
+    train_collator = DataCollatorForSeq2Seq(
+        tokenizer,
+        model=model,
+        label_pad_token_id=-100,
+        pad_to_multiple_of=8 if accelerator.use_fp16 else None
+    )
+    train_dataloader = DataLoader(
+        train_dataset,
+        shuffle=True,
+        collate_fn=train_collator,
+        batch_size=args.per_device_train_batch_size
+    )
+
     if args.pad_to_max_length:
         # If padding was already done ot max length, we use the default data collator that will just convert everything
         # to tensors.
-        data_collator = default_data_collator
+        eval_collator = default_data_collator
     else:
         # Otherwise, `DataCollatorWithPadding` will apply dynamic padding for us (by padding to the maximum length of
         # the samples passed). When using mixed precision, we add `pad_to_multiple_of=8` to pad all tensors to multiple
         # of 8s, which will enable the use of Tensor Cores on NVIDIA hardware with compute capability >= 7.5 (Volta).
-        data_collator = DataCollatorForMultipleChoice(
+        eval_collator = DataCollatorForMultipleChoice(
             tokenizer, pad_to_multiple_of=(8 if accelerator.use_fp16 else None)
         )
 
-    eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
-
+    eval_dataloader = DataLoader(eval_dataset, collate_fn=eval_collator, batch_size=args.per_device_eval_batch_size)
 
     # Use the device given by the `accelerator` object.
     device = accelerator.device
     if args.parallelize:
-        assert torch.cuda.is_available(), "You need at least 1 GPU to call `parallelize` (even though if there is only 1 GPU, there won't be any model parallelism)."
+        num_gpus = torch.cuda.device_count()
+        assert num_gpus > 1, "You need at least 2 GPUs to use `model.parallelize()`."
         model.parallelize()
     else:
         model.to(device)
 
+    # Optimizer
+    # Split weights in two groups, one with weight decay and the other not.
+    no_decay = ["bias", "LayerNorm.weight"]
+    optimizer_grouped_parameters = [
+        {
+            "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+            "weight_decay": args.weight_decay,
+        },
+        {
+            "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+            "weight_decay": 0.0,
+        },
+    ]
+    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate)
+
+    # Scheduler and math around the number of training steps.
+    num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
+    if args.max_train_steps is None:
+        args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
+    else:
+        args.num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
+
+    lr_scheduler = get_scheduler(
+        name=args.lr_scheduler_type,
+        optimizer=optimizer,
+        num_warmup_steps=args.num_warmup_steps,
+        num_training_steps=args.max_train_steps,
+    )
+
     # Prepare everything with our `accelerator`.
-    eval_dataloader = accelerator.prepare(eval_dataloader)
+    optimizer, train_dataloader, eval_dataloader = accelerator.prepare(optimizer, train_dataloader, eval_dataloader)
 
 
     # Metrics
     metric = load_metric("accuracy")
 
-    # Eval!
-    total_batch_size = args.per_device_eval_batch_size * accelerator.num_processes
-
-    logger.info("***** Running evaluation *****")
-    logger.info(f"  Num examples = {len(eval_dataset)}")
-    logger.info(f"  Instantaneous batch size per device = {args.per_device_eval_batch_size}")
-    logger.info(f"  Total eval batch size (w. parallel, distributed) = {total_batch_size}")
+    total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
+    logger.info("***** Running training *****")
+    logger.info(f"  Num examples = {len(train_dataset)}")
+    logger.info(f"  Num Epochs = {args.num_train_epochs}")
+    logger.info(f"  Instantaneous batch size per device = {args.per_device_train_batch_size}")
+    logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
+    logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
+    logger.info(f"  Total optimization steps = {args.max_train_steps}")
     # Only show the progress bar once on each machine.
-    progress_bar = tqdm(range(len(eval_dataloader)), disable=not accelerator.is_local_main_process)
+    progress_bar = tqdm(range(args.max_train_steps), disable=not accelerator.is_local_main_process)
+    global_steps = 0
 
-    model.eval()
-    for batch in eval_dataloader:
-        model_inputs = {
-            k: batch[k]
-            for k in ["input_ids", "attention_mask", "labels"]
+    if args.wandb_proj and accelerator.is_main_process:
+        import wandb
+        extra_metadata = {
+            'template_jinja': template.jinja,
+            'template_answer_choices': template.answer_choices,
+            'template_reflects_original_task': template.metadata.original_task,
+            'template_choices_in_prompt': template.metadata.choices_in_prompt,
+            'template_comment': template.reference,
         }
-        with torch.no_grad():
-            logits = model(**model_inputs).logits
-        masked_log_probs = batch["labels_attention_mask"].unsqueeze(-1) * torch.log_softmax(logits, dim=-1)
-        seq_token_log_probs = torch.gather(masked_log_probs, -1, batch["labels"].unsqueeze(-1))
-        seq_log_prob = seq_token_log_probs.squeeze(dim=-1).sum(dim=-1)
-        seq_log_prob = seq_log_prob.view(batch["targets"].size(0), -1) #TODO(Victor): this reshapes works based on the assumption that all examples have the same number of choices. the pre-processing doesn't make this assumption.
-        predictions = seq_log_prob.argmax(dim=-1)
-
-        metric.add_batch(
-            predictions=accelerator.gather(predictions),
-            references=accelerator.gather(batch["targets"]),
+        run_config = vars(args)
+        run_config.update(extra_metadata)
+        wandb.init(
+            project=args.wandb_proj,
+            config=run_config,
+            # name=f'S{len(train_set)} {args.template_name} R{args.seed}',  # uncomment to customize each run's name
+            # reinit=True,  # uncomment if running multiple runs in one script
         )
 
-        progress_bar.update(1)
+    result_table = []
+    for epoch in range(1, args.num_train_epochs+1):
+        model.train()
+        for step, batch in enumerate(train_dataloader):
+            outputs = model(**batch)
+            loss = outputs.loss
+            loss = loss / args.gradient_accumulation_steps
+            accelerator.backward(loss)
+            if step % args.gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad()
+                progress_bar.update(1)
+                global_steps += 1
+                loss = loss.item()
+                if accelerator.is_main_process:
+                    tqdm.write(f"{epoch = }, {global_steps = }, {loss = }")
+                if args.wandb_proj and accelerator.is_main_process:
+                    wandb.log({"loss": loss}, step=global_steps)
 
-    eval_metric = metric.compute()
-    accelerator.print(f"Result: {eval_metric}")
+            if global_steps >= args.max_train_steps:
+                break
 
-    results = {
-        "dataset_name": args.dataset_name,
-        "dataset_config_name": args.dataset_config_name,
-        "template_name": args.template_name,
-        "evaluation": eval_metric
-    }
+        # Evaluate every epoch; TODO(Albert) also to support eval by every x steps
+        total_batch_size = args.per_device_eval_batch_size * accelerator.num_processes
+        logger.info("***** Running evaluation *****")
+        logger.info(f"  Num examples = {len(eval_dataset)}")
+        logger.info(f"  Instantaneous batch size per device = {args.per_device_eval_batch_size}")
+        logger.info(f"  Total eval batch size (w. parallel, distributed) = {total_batch_size}")
+        # Only show the progress bar once on each machine.  # NOTE commented out to avoid nested pbar mess
+        # progress_bar = tqdm(range(len(eval_dataloader)), disable=not accelerator.is_local_main_process)
+
+        model.eval()
+        for batch in eval_dataloader:
+            model_inputs = {
+                k: batch[k]
+                for k in ["input_ids", "attention_mask", "labels"]
+            }
+            with torch.no_grad():
+                logits = model(**model_inputs).logits
+            masked_log_probs = batch["labels_attention_mask"].unsqueeze(-1) * torch.log_softmax(logits, dim=-1)
+            seq_token_log_probs = torch.gather(masked_log_probs, -1, batch["labels"].unsqueeze(-1))
+            seq_log_prob = seq_token_log_probs.squeeze(dim=-1).sum(dim=-1)
+            seq_log_prob = seq_log_prob.view(batch["targets"].size(0), -1) #TODO(Victor): this reshapes works based on the assumption that all examples have the same number of choices. the pre-processing doesn't make this assumption.
+            predictions = seq_log_prob.argmax(dim=-1)
+
+            metric.add_batch(
+                predictions=accelerator.gather(predictions),
+                references=accelerator.gather(batch["targets"]),
+            )
+
+            # progress_bar.update(1)
+
+        eval_metric = metric.compute()
+        score = eval_metric["accuracy"]  # TODO support other metrics; currently hardcoded at load_metric() anyway
+        accelerator.print(f"Accuracy: {score}")
+        result_table.append({
+            "dataset_name": args.dataset_name,
+            "dataset_config_name": args.dataset_config_name,
+            "template_name": args.template_name,
+            "epoch": epoch,
+            "step": global_steps,
+            "metric": 'accuracy (rank)',
+            "score": score,
+        })
+        if args.wandb_proj and accelerator.is_main_process:
+            wandb.log({"accuracy": score}, step=global_steps)
+    # End training loop
+
     if accelerator.is_main_process:
         if args.output_dir is not None:
-            with open(os.path.join(args.output_dir, "results.json"), "w") as f:
-                json.dump(results, f, indent=4)
+            with open(os.path.join(args.output_dir, "results.csv"), "w") as f:
+                writer = csv.DictWriter(f, fieldnames=result_table[0].keys())
+                writer.writeheader()
+                writer.writerows(result_table)
+
+        if args.wandb_proj:
+            wandb.finish()
 
 
 if __name__ == "__main__":
