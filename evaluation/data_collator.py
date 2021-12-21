@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from itertools import chain
-from types import Union
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from transformers import PreTrainedTokenizerBase

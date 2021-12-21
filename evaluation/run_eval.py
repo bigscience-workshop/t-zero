@@ -41,8 +41,8 @@ from transformers import (
 )
 from promptsource.templates import DatasetTemplates
 
-from evaluation.data_collator import DataCollatorForMultipleChoice
-from evaluation.model import EncoderDecoderModel, ModelBase
+from .data_collator import DataCollatorForMultipleChoice
+from .model import ModelBase
 
 logger = logging.getLogger(__name__)
 
