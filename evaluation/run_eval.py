@@ -200,23 +200,31 @@ def main():
             "Either `args.config_name` or `args.model_name_or_path` should be provided."
         )
 
-    # Some tokenizers don't have a token id, if so we set it to some special token.
-    if config.pad_token_id is None:
-        for token_id in [config.eos_token_id, config.bos_token_id, config.sep_token_id]:
-            if token_id is not None:
-                config.pad_token_id = token_id
-        if config.pad_token_id is None:
-            raise ValueError("Please define a pad token id.")
+    # # Some tokenizers don't have a token id, if so we set it to some special token.
+    # if config.pad_token_id is None:
+    #     for token_id in [config.eos_token_id, config.bos_token_id, config.sep_token_id]:
+    #         if token_id is not None:
+    #             config.pad_token_id = token_id
+    #     if config.pad_token_id is None:
+    #         raise ValueError("Please define a pad token id.")
 
     if args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name, use_fast=not args.use_slow_tokenizer)
     elif args.model_name_or_path:
-        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, config=config, use_fast=not args.use_slow_tokenizer)
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=not args.use_slow_tokenizer)
     else:
         raise ValueError(
             "You are instantiating a new tokenizer from scratch. This is not supported by this script."
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
+
+    if tokenizer.pad_token is None:
+        for token in [tokenizer.eos_token, tokenizer.bos_token, tokenizer.sep_token]:
+            if token is not None:
+                tokenizer.pad_token = token
+        if tokenizer.pad_token is None:
+            raise ValueError("Please define a pad token id.")
+
 
     model = ModelBase.from_config(
         config=config,
