@@ -88,7 +88,7 @@ class DecoderModel(ModelBase):
         }
         # Set position ids correctly to take care of padding tokens between inputs_ids and labels
         position_ids = torch.cumsum(model_inputs["attention_mask"].to(torch.long), dim=-1)
-        model_inputs[position_ids] = position_ids
+        model_inputs["position_ids"] = position_ids
 
         logits = self._model(**model_inputs).logits[:, prefix_length:]
         masked_log_probs = batch["labels_attention_mask"].unsqueeze(-1) * torch.log_softmax(logits, dim=-1)
