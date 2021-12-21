@@ -23,9 +23,6 @@ import argparse
 import logging
 import os
 import random
-from dataclasses import dataclass
-from itertools import chain
-from typing import Optional, Union
 import json
 
 import datasets
@@ -40,12 +37,12 @@ from transformers import (
     AutoConfig,
     AutoModelForSeq2SeqLM,
     AutoTokenizer,
-    PreTrainedTokenizerBase,
     default_data_collator,
 )
-from transformers.file_utils import PaddingStrategy
 from promptsource.templates import DatasetTemplates
 
+from evaluation.data_collator import DataCollatorForMultipleChoice
+from evaluation.model import EncoderDecoderModel, ModelBase
 
 logger = logging.getLogger(__name__)
 
@@ -145,82 +142,6 @@ def parse_args():
     return args
 
 
-@dataclass
-class DataCollatorForMultipleChoice:
-    """
-    Data collator that will dynamically pad the inputs for multiple choice received.
-
-    Args:
-        tokenizer (:class:`~transformers.PreTrainedTokenizer` or :class:`~transformers.PreTrainedTokenizerFast`):
-            The tokenizer used for encoding the data.
-        padding (:obj:`bool`, :obj:`str` or :class:`~transformers.file_utils.PaddingStrategy`, `optional`, defaults to :obj:`True`):
-            Select a strategy to pad the returned sequences (according to the model's padding side and padding index)
-            among:
-
-            * :obj:`True` or :obj:`'longest'`: Pad to the longest sequence in the batch (or no padding if only a single
-            sequence if provided).
-            * :obj:`'max_length'`: Pad to a maximum length specified with the argument :obj:`max_length` or to the
-            maximum acceptable input length for the model if that argument is not provided.
-            * :obj:`False` or :obj:`'do_not_pad'` (default): No padding (i.e., can output a batch with sequences of
-            different lengths).
-        max_length (:obj:`int`, `optional`):
-            Maximum length of the returned list and optionally padding length (see above).
-        pad_to_multiple_of (:obj:`int`, `optional`):
-            If set will pad the sequence to a multiple of the provided value.
-
-            This is especially useful to enable the use of Tensor Cores on NVIDIA hardware with compute capability >=
-            7.5 (Volta).
-            Note that it's very NOT recommended to use fp16 to do any time of inference with T0 as the predictions will vastly differ from the predictions using fp32.
-    """
-
-    tokenizer: PreTrainedTokenizerBase
-    padding: Union[bool, str, PaddingStrategy] = True
-    max_length: Optional[int] = None
-    pad_to_multiple_of: Optional[int] = None
-
-    def __call__(self, features):
-        num_choices = len(features[0]["input_ids"])
-        flattened_features = [
-            [
-                {
-                    k: v[i]
-                    for k, v in feature.items()
-                    if k != "targets"
-                }
-                for i in range(num_choices)
-            ]
-            for feature in features
-        ]
-        flattened_features = list(chain(*flattened_features))
-
-        batch = self.tokenizer.pad(
-            flattened_features,
-            padding=self.padding,
-            max_length=self.max_length,
-            pad_to_multiple_of=self.pad_to_multiple_of,
-        )
-
-        # Pad the labels because it's not padded automatically
-        max_label_length = max([len(elem["labels"]) for elem in flattened_features])
-        batch["labels"] = [
-            l + [self.tokenizer.pad_token_id]*(max_label_length - len(l))
-            for l in [elem["labels"] for elem in flattened_features]
-        ]
-        batch["labels_attention_mask"] = [
-            m + [0]*(max_label_length - len(m))
-            for m in [elem["labels_attention_mask"] for elem in flattened_features]
-        ]
-
-        # Convert to tensors
-        batch = {
-            k: torch.tensor(v)
-            for k, v in batch.items()
-        }
-
-        batch["targets"] = torch.tensor([f.pop("targets") for f in features])
-        return batch
-
-
 def main():
     args = parse_args()
 
@@ -272,7 +193,7 @@ def main():
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
     if args.config_name:
-        config = AutoConfig.from_pretrained(args.model_name_or_path)
+        config = AutoConfig.from_pretrained(args.config_name)
     elif args.model_name_or_path:
         config = AutoConfig.from_pretrained(args.model_name_or_path)
     else:
@@ -290,15 +211,11 @@ def main():
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
-    if args.model_name_or_path:
-        model = AutoModelForSeq2SeqLM.from_pretrained(
-            args.model_name_or_path,
-            from_tf=bool(".ckpt" in args.model_name_or_path),
-            config=config,
-        )
-    else:
-        logger.info("Training new model from scratch")
-        model = AutoModelForSeq2SeqLM.from_config(config)
+    model = ModelBase.from_config(
+        config=config,
+        model_name_or_path=args.model_name_or_path,
+        parallelize=args.parallelize
+    )
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
@@ -397,12 +314,8 @@ def main():
 
 
     # Use the device given by the `accelerator` object.
-    device = accelerator.device
-    if args.parallelize:
-        assert torch.cuda.is_available(), "You need at least 1 GPU to call `parallelize` (even though if there is only 1 GPU, there won't be any model parallelism)."
-        model.parallelize()
-    else:
-        model.to(device)
+    if not args.parallelize:
+        model.to(accelerator.device)
 
     # Prepare everything with our `accelerator`.
     eval_dataloader = accelerator.prepare(eval_dataloader)
@@ -423,17 +336,8 @@ def main():
 
     model.eval()
     for batch in eval_dataloader:
-        model_inputs = {
-            k: batch[k]
-            for k in ["input_ids", "attention_mask", "labels"]
-        }
         with torch.no_grad():
-            logits = model(**model_inputs).logits
-        masked_log_probs = batch["labels_attention_mask"].unsqueeze(-1) * torch.log_softmax(logits, dim=-1)
-        seq_token_log_probs = torch.gather(masked_log_probs, -1, batch["labels"].unsqueeze(-1))
-        seq_log_prob = seq_token_log_probs.squeeze(dim=-1).sum(dim=-1)
-        seq_log_prob = seq_log_prob.view(batch["targets"].size(0), -1) #TODO(Victor): this reshapes works based on the assumption that all examples have the same number of choices. the pre-processing doesn't make this assumption.
-        predictions = seq_log_prob.argmax(dim=-1)
+            predictions = model(batch)
 
         metric.add_batch(
             predictions=accelerator.gather(predictions),
