@@ -18,7 +18,7 @@ class ModelBase(nn.Module):
             (MODEL_FOR_CAUSAL_LM_MAPPING, DecoderModel),
             (MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING, EncoderDecoderModel),
         ]
-        config_name = config.__class__.__name__
+        config_name = config.__class__
         for transformer_model_mapping, model in task_mapping:
             transformer_model_name = transformer_model_mapping.get(config_name, None)
             if transformer_model_name is not None:

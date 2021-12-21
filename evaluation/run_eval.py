@@ -35,7 +35,6 @@ import transformers
 from accelerate import Accelerator
 from transformers import (
     AutoConfig,
-    AutoModelForSeq2SeqLM,
     AutoTokenizer,
     default_data_collator,
 )
@@ -200,6 +199,14 @@ def main():
         raise ValueError(
             "Either `args.config_name` or `args.model_name_or_path` should be provided."
         )
+
+    # Some tokenizers don't have a token id, if so we set it to some special token.
+    if config.pad_token_id is None:
+        for token_id in [config.eos_token_id, config.bos_token_id, config.sep_token_id]:
+            if token_id is not None:
+                config.pad_token_id = token_id
+        if config.pad_token_id is None:
+            raise ValueError("Please define a pad token id.")
 
     if args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name, use_fast=not args.use_slow_tokenizer)

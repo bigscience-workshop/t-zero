@@ -11,7 +11,7 @@ The results will be saved in a json file in the `output_dir` folder.
 Here's the command to launch the evaluation on a single process:
 
 ```bash
-python run_eval.py \
+python -m evaluation.run_eval \
     --dataset_name super_glue \
     --dataset_config_name rte \
     --template_name "must be true" \
@@ -37,7 +37,7 @@ accelerate run_eval.py \
 When the model is too big to fit on a single GPU, you can use model parallelism to split it across multiple GPUs. You should add the flag `--parallelize` when calling the script:
 
 ```bash
-python run_eval.py \
+python -m evaluation.run_eval \
     --dataset_name super_glue \
     --dataset_config_name rte \
     --template_name "must be true" \
