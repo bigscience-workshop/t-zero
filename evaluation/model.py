@@ -90,7 +90,7 @@ class DecoderModel(ModelBase):
         position_ids = torch.cumsum(model_inputs["attention_mask"].to(torch.long), dim=-1)
         model_inputs["position_ids"] = position_ids
 
-        logits = self._model(**model_inputs).logits[:, prefix_length:]
+        logits = self._model(**model_inputs).logits[:, prefix_length-1:-1]
         masked_log_probs = batch["labels_attention_mask"].unsqueeze(-1) * torch.log_softmax(logits, dim=-1)
         seq_token_log_probs = torch.gather(masked_log_probs, -1, batch["labels"].unsqueeze(-1))
         seq_log_prob = seq_token_log_probs.squeeze(dim=-1).sum(dim=-1)
