@@ -57,6 +57,7 @@ export DATA_DIR="${BUCKET}/your_data_dir"
 export MODEL_DIR="${BUCKET}/your_model_dir"
 
 export MIXTURE_NAME="d4_gpt_sglue_train"
+export TRAIN_STEPS=1112200
 
 t5_mesh_transformer \
     --tpu="${TPU_NAME}" \
@@ -69,7 +70,7 @@ t5_mesh_transformer \
     --gin_param="MIXTURE_NAME = '${MIXTURE_NAME}'" \
     --gin_file="gs://t5-data/pretrained_models/t5.1.1.lm100k.xxl/operative_config.gin" \
     --gin_param="utils.tpu_mesh_shape.tpu_topology = '${TPU_SIZE}'" \
-    --gin_param="run.train_steps = 1112200" \
+    --gin_param="run.train_steps = ${TRAIN_STEPS}" \
     --gin_file="learning_rate_schedules/constant_0_001.gin" \
     --gin_param="tokens_per_batch=1048576" \
     --gin_param="pack_dataset.use_custom_ops = False" \
@@ -93,6 +94,7 @@ export DATA_DIR="${BUCKET}/your_data_dir"
 export MODEL_DIR="${BUCKET}/your_model_dir"
 
 export EVAL_MIXTURE_NAME="d4_score_eval"
+export TRAIN_STEPS=1112200
 
 t5_mesh_transformer \
     --tpu="${TPU_NAME}" \
