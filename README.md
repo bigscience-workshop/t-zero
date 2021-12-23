@@ -2,7 +2,7 @@
 
 This repository serves primarily as codebase and instructions for training, evaluation and inference of T0.
 
-T0 is the model developed in [Multitask Prompted Training Enables Zero-Shot Task Generalization](https://arxiv.org/abs/2110.08207). In this paper, we demonstrate that massive multitask prompted fine-tuning is an extremely effective way to obtain task zero-shot generalization. T0 outperforms or matches GPT-3 while being 16x smaller.
+T0 is the model developed in [Multitask Prompted Training Enables Zero-Shot Task Generalization](https://arxiv.org/abs/2110.08207). In this paper, we demonstrate that massive multitask prompted fine-tuning is extremely effective to obtain task zero-shot generalization. T0 outperforms or matches GPT-3 while being 16x smaller.
 
 While the codebase in this repository mainly reproduces and replicates the training and evaluation of T0, it will be useful for future research on massively multitask fine-tuning.
 
