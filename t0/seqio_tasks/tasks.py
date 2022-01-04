@@ -275,26 +275,26 @@ TASK_BLACKLIST = [
     "gigaword_summarize_",
 ]
 
-# Tasks that failed caching (won't try to fix them for now) - remove when we are done
-D4_TRAIN_SCORE_EVAL_TASK_BLACKLIST = [
-    "amazon_polarity_Is_this_product_review_positive_score_eval",
-    "amazon_polarity_Is_this_review_negative_score_eval",
-    "amazon_polarity_Is_this_review_score_eval",
-    "amazon_polarity_User_recommend_this_product_score_eval",
-    "amazon_polarity_convey_negative_or_positive_sentiment_score_eval",
-    "amazon_polarity_flattering_or_not_score_eval",
-    "amazon_polarity_negative_or_positive_tone_score_eval",
-    "amazon_polarity_user_satisfied_score_eval",
-    "amazon_polarity_would_you_buy_score_eval",
-    "dbpedia_14_given_a_choice_of_categories__score_eval",
-    "dbpedia_14_given_list_what_category_does_the_paragraph_belong_to_score_eval",
-    "dbpedia_14_pick_one_category_for_the_following_text_score_eval",
-    "wiki_hop_original_choose_best_object_affirmative_1_score_eval",
-    "wiki_hop_original_choose_best_object_affirmative_2_score_eval",
-    "wiki_hop_original_choose_best_object_affirmative_3_score_eval",
-    "wiki_hop_original_choose_best_object_interrogative_1_score_eval",
-    "wiki_hop_original_choose_best_object_interrogative_2_score_eval",
-]
+# # Tasks that failed caching (won't try to fix them for now) - remove when we are done
+# D4_TRAIN_SCORE_EVAL_TASK_BLACKLIST = [
+#     "amazon_polarity_Is_this_product_review_positive_score_eval",
+#     "amazon_polarity_Is_this_review_negative_score_eval",
+#     "amazon_polarity_Is_this_review_score_eval",
+#     "amazon_polarity_User_recommend_this_product_score_eval",
+#     "amazon_polarity_convey_negative_or_positive_sentiment_score_eval",
+#     "amazon_polarity_flattering_or_not_score_eval",
+#     "amazon_polarity_negative_or_positive_tone_score_eval",
+#     "amazon_polarity_user_satisfied_score_eval",
+#     "amazon_polarity_would_you_buy_score_eval",
+#     "dbpedia_14_given_a_choice_of_categories__score_eval",
+#     "dbpedia_14_given_list_what_category_does_the_paragraph_belong_to_score_eval",
+#     "dbpedia_14_pick_one_category_for_the_following_text_score_eval",
+#     "wiki_hop_original_choose_best_object_affirmative_1_score_eval",
+#     "wiki_hop_original_choose_best_object_affirmative_2_score_eval",
+#     "wiki_hop_original_choose_best_object_affirmative_3_score_eval",
+#     "wiki_hop_original_choose_best_object_interrogative_1_score_eval",
+#     "wiki_hop_original_choose_best_object_interrogative_2_score_eval",
+# ]
 
 seqio.MixtureRegistry.add(
     "d4_train",
