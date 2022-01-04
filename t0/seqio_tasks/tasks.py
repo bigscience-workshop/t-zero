@@ -126,7 +126,6 @@ def add_task(dataset_name, subset_name, template_name, task_name=None, split_map
             is_correct_fn=lambda ex: tf.equal(ex["answer_choices"], tf.strings.strip(ex["targets"])),
             weight_fn=lambda ex: 1.0,
         )
-
         fixed_choices = template.get_fixed_answer_choices_list()
         num_classes = len(fixed_choices) if fixed_choices else None
         seqio.TaskRegistry.add(
@@ -140,10 +139,15 @@ def add_task(dataset_name, subset_name, template_name, task_name=None, split_map
 
 
 datatset_subset_tuple = Tuple[str, Optional[str]]
-d4_train: List[datatset_subset_tuple] = []
 d4_eval: List[datatset_subset_tuple] = []
-d3_train_gpt: List[datatset_subset_tuple] = []
-d3_train_sglue: List[datatset_subset_tuple] = []
+d4_train: Dict[str, List[datatset_subset_tuple]] = {
+    "BASE": [],
+    # GPT3 evaluation set
+    "GPT_EVAL": [],
+    # SuperGLUE (except RTE and CB)
+    "SGLUE": []
+}
+
 bias_fairness_eval: List[datatset_subset_tuple] = []
 gsheet: Dict[datatset_subset_tuple, Dict] = {}
 experiment_path = pkg_resources.resource_filename(__name__, "experiment_D4.csv")
@@ -155,14 +159,14 @@ with open(experiment_path) as exp_file:
         if row["subset"] == "":
             row["subset"] = None  # to match promptsource.Template object
         dataset_subset = (row["HF_name"], row["subset"])
-        if row["do_train"] == "TRUE":
-            d4_train.append(dataset_subset)
+        if row["do_train"] != "":
+            do_train_source = row["do_train"]
+            # sanity checks
+            if do_train_source == "SGLUE":
+                assert dataset_subset[0] == "super_glue"
+            d4_train[do_train_source].append(dataset_subset)
         if row["do_eval"] == "TRUE":
             d4_eval.append(dataset_subset)
-        if row["D3_do_train"] == "TRUE" and "GPT" in row["seed_paper"]:
-            d3_train_gpt.append(dataset_subset)
-        if row["D3_do_train"] == "TRUE" and row["HF_name"] == "super_glue":
-            d3_train_sglue.append(dataset_subset)
         if (
             row["do_eval"] == "TRUE"
             and row["task_by_convention"] == "bias_and_fairness"
@@ -170,15 +174,13 @@ with open(experiment_path) as exp_file:
         ):
             bias_fairness_eval.append(dataset_subset)
         gsheet[dataset_subset] = row
-all_datasets = d4_train + d4_eval + d3_train_gpt + d3_train_sglue + bias_fairness_eval
+all_datasets = sum(d4_train.values()) + d4_eval + bias_fairness_eval
 
 all_templates = promptsource.templates.TemplateCollection()
 all_templates.remove("anli")  # Need to special-case ANLI due to weird split conventions
 
 # 3 stages of training/ablation: D4 -> GPT -> SuperGLUE
-d4_train_mixture: List[str] = []  # strings are dataset_subset_template
-gpt_train_mixture: List[str] = []
-sglue_train_mixture: List[str] = []
+d4_train_mixture: Dict[str,List[str]] = {key: [] for key in d4_train }
 d4_eval_mixture: List[str] = []
 bias_fairness_eval_mixture: List[str] = []
 mixture_cap: Dict[str, int] = {}
@@ -213,15 +215,13 @@ for dataset_name, subset_name in all_templates.keys:
         if template.metadata.original_task:
             all_original_tasks.append(task_name)
 
-        if (dataset_name, subset_name) in d4_train:
-            d4_train_mixture.append(task_name)
-            mixture_cap[task_name] = cap
-        if (dataset_name, subset_name) in d3_train_gpt:
-            gpt_train_mixture.append(task_name)
-            mixture_cap[task_name] = cap
-        if (dataset_name, subset_name) in d3_train_sglue:
-            sglue_train_mixture.append(task_name)
-            mixture_cap[task_name] = cap
+        # Check that the dataset_subset_tuple is in d4_train
+        for key, dataset_subset_tuples in d4_train:
+            if (dataset_name, subset_name) in dataset_subset_tuples:
+                d4_train_mixture[key].append(task_name)
+                mixture_cap[task_name] = cap
+
+        # Check that the dataset_subset_tuplek is in d4_eval
         if (dataset_name, subset_name) in d4_eval:
             if template.metadata.original_task:
                 d4_eval_mixture.append(task_name)
@@ -300,7 +300,7 @@ D4_TRAIN_SCORE_EVAL_TASK_BLACKLIST = [
 
 seqio.MixtureRegistry.add(
     "d4_train",
-    [task for task in d4_train_mixture if task not in TASK_BLACKLIST],
+    [task for task in d4_train_mixture["BASE"] if task not in TASK_BLACKLIST],
     default_rate=lambda t: mixture_cap[t.name],
 )
 
@@ -317,14 +317,14 @@ seqio.MixtureRegistry.add(
 # )
 
 seqio.MixtureRegistry.add(
-    "d4_gpt_train",
-    [task for task in d4_train_mixture + gpt_train_mixture if task not in TASK_BLACKLIST],
+    "d4_gpt_eval_train",
+    [task for task in d4_train_mixture["BASE"] + d4_train_mixture["GPT_EVAL"] if task not in TASK_BLACKLIST],
     default_rate=lambda t: mixture_cap[t.name],
 )
 
 seqio.MixtureRegistry.add(
     "d4_gpt_sglue_train",
-    [task for task in d4_train_mixture + gpt_train_mixture + sglue_train_mixture if task not in TASK_BLACKLIST],
+    [task for task in d4_train_mixture["BASE"] + d4_train_mixture["GPT_EVAL"] + d4_train_mixture["SGLUE"] if task not in TASK_BLACKLIST],
     default_rate=lambda t: mixture_cap[t.name],
 )
 
@@ -394,13 +394,13 @@ seqio.MixtureRegistry.add(
 
 seqio.MixtureRegistry.add(
     "d4_train_one_og_prompt",
-    [task for task in single_original_task.values() if task in d4_train_mixture and task not in TASK_BLACKLIST],
+    [task for task in single_original_task.values() if task in d4_train_mixture["BASE"] and task not in TASK_BLACKLIST],
     default_rate=lambda t: mixture_cap[t.name],
 )
 
 seqio.MixtureRegistry.add(
     "d4_train_all_og_prompts",
-    [task for task in all_original_tasks if task in d4_train_mixture and task not in TASK_BLACKLIST],
+    [task for task in all_original_tasks if task in d4_train_mixture["BASE"] and task not in TASK_BLACKLIST],
     default_rate=lambda t: mixture_cap[t.name],
 )
 
