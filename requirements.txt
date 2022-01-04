@@ -1,5 +1,0 @@
-git+git://github.com/bigscience-workshop/promptsource@v0.1.0
-accelerate
-transformers
-torch
-seqio
