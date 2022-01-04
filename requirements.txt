@@ -4,6 +4,7 @@ transformers
 datasets
 jinja2
 torch
+seqio
 sentencepiece
 protobuf
 scikit-learn
