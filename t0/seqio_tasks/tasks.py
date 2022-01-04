@@ -155,8 +155,6 @@ experiment_path = pkg_resources.resource_filename(__name__, "experiment_D4.csv")
 with open(experiment_path) as exp_file:
     reader = csv.DictReader(exp_file)
     for row in reader:
-        if row["skip"]:
-            continue
         if row["subset"] == "":
             row["subset"] = None  # to match promptsource.Template object
         dataset_subset = (row["HF_name"], row["subset"])
