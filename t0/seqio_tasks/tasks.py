@@ -171,7 +171,8 @@ with open(experiment_path) as exp_file:
                 assert row["task_by_convention"] == "bias_and_fairness"
             d4_eval[do_eval_source].append(dataset_subset)
         gsheet[dataset_subset] = row
-all_datasets = sum(d4_train.values()) + sum(d4_train.values())
+
+all_datasets = [*d4_train.values(), *d4_eval.values()]
 
 all_templates = promptsource.templates.TemplateCollection()
 all_templates.remove("anli")  # Need to special-case ANLI due to weird split conventions
