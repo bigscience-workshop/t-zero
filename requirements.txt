@@ -1,10 +1,5 @@
 git+git://github.com/bigscience-workshop/promptsource@v0.1.0
 accelerate
 transformers
-datasets
-jinja2
 torch
 seqio
-sentencepiece
-protobuf
-scikit-learn

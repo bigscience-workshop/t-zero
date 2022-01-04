@@ -22,6 +22,25 @@ setup(
     packages=find_packages(),
     license="Apache Software License 2.0",
     long_description=readme,
+    install_requires=[
+        "promptsource",
+        "accelerate",
+        "transformers",
+        "torch",
+        "datasets",
+        "jinja2",
+        "datasets",
+        "sentencepiece",
+        "protobuf",
+        "scikit-learn"
+    ],
+    extra_require={
+        "seqio_tasks": [
+            "seqio",
+            "t5",
+            "tensorflow",
+        ]
+    },
     package_data={
         "": [
             "seqio_tasks/experiment_D4.csv",

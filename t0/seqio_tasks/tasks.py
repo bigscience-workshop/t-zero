@@ -4,15 +4,14 @@ from typing import Dict, List, Optional, Tuple
 
 import datasets
 import pkg_resources
+import promptsource.templates
 import seqio
 import t5
-import tensorflow as tf
 from t5.data.glue_utils import get_glue_metric, get_super_glue_metric
 from t5.evaluation import metrics as mt
+import tensorflow as tf
 
-import promptsource.templates
-from promptsource.seqio_tasks import utils
-
+from t0.seqio_tasks import utils
 
 GET_METRICS = {
     "BLEU": mt.bleu,
