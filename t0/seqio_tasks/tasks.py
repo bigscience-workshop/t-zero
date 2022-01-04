@@ -172,7 +172,7 @@ with open(experiment_path) as exp_file:
             d4_eval[do_eval_source].append(dataset_subset)
         gsheet[dataset_subset] = row
 
-all_datasets = [*d4_train.values(), *d4_eval.values()]
+all_datasets = sum(d4_train.values(), []) + sum(d4_eval.values(), [])
 
 all_templates = promptsource.templates.TemplateCollection()
 all_templates.remove("anli")  # Need to special-case ANLI due to weird split conventions
@@ -213,7 +213,7 @@ for dataset_name, subset_name in all_templates.keys:
             all_original_tasks.append(task_name)
 
         # Check that the dataset_subset_tuple is in d4_train
-        for key, dataset_subset_tuples in d4_train:
+        for key, dataset_subset_tuples in d4_train.items():
             if (dataset_name, subset_name) in dataset_subset_tuples:
                 d4_train_mixture[key].append(task_name)
                 mixture_cap[task_name] = cap
