@@ -62,31 +62,140 @@ logger = logging.getLogger(__name__)
 def parse_args():
     parser = argparse.ArgumentParser(description="Fine-tuning T0 in PyTorch, optionally few-shot.")
     parser.add_argument(
+        "-d",
         "--dataset_name",
         type=str,
         default=None,
-        help="The name of the dataset to use (via the datasets library).",
         required=True,
+        help="The name of the dataset to use (via the datasets library).",
     )
     parser.add_argument(
+        "-s",
         "--dataset_config_name",
         type=str,
         default=None,
         help="The configuration name (usually a subset) of the dataset to use (via the datasets library).",
     )
     parser.add_argument(
+        "-t",
         "--template_name",
         type=str,
         default=None,
-        help="The template/prompt name in `promptsource`.",
         required=True,
+        help="The template/prompt name in `promptsource`.",
     )
     parser.add_argument(
+        "-o",
         "--output_dir",
         type=str,
         default=None,
         required=True,
         help="Where to store the results CSV and (TODO) optionally the final model."
+    )
+    parser.add_argument(
+        "-m",
+        "--model_name_or_path",
+        type=str,
+        help="Path to pretrained model or model identifier from huggingface.co/models. The list of T0 variants can be found on `https://huggingface.co/bigscience/T0_3B`",
+        required=True,
+    )
+    parser.add_argument(
+        "-pa",
+        "--parallelize",
+        action="store_true",
+        help=(
+            "If passed, will call `model.parallelize` which splits the model on all GPUs available (model parallelism). "
+            "Note that this feature is still experimental in HF Transformers."
+        ),
+    )
+    parser.add_argument(
+        "-eb",
+        "--per_device_eval_batch_size",
+        type=int,
+        default=8,
+        help="Batch size (per device) for the evaluation dataloader. Will be multiplied by the number of answer choices.",
+    )
+    parser.add_argument(
+        "-tb",
+        "--per_device_train_batch_size",
+        type=int,
+        default=4,
+        help="Batch size (per device) for the training dataloader.",
+    )
+    parser.add_argument(
+        "-ns",
+        "--num_shots",
+        type=int,
+        default=None,
+        help="Number of training examples for few-shot learning. Default is None, which uses the entire train set.",
+    )
+    parser.add_argument(
+        "-lr",
+        "--learning_rate",
+        type=float,
+        default=1e-4,
+        help="Initial learning rate (after the potential warmup period) to use.",
+    )
+    parser.add_argument(
+        "-ep",
+        "--num_train_epochs",
+        type=int,
+        default=10,
+        help="Total number of training epochs to perform."
+    )
+    parser.add_argument(
+        "-ms",
+        "--max_train_steps",
+        type=int,
+        default=None,
+        help="Total number of training steps to perform. If provided, overrides num_train_epochs.",
+    )
+    parser.add_argument(
+        "-ga",
+        "--gradient_accumulation_steps",
+        type=int,
+        default=1,
+        help="Number of updates steps to accumulate before performing a backward/update pass.",
+    )
+    parser.add_argument(
+        "-ie",
+        "--input_eos",
+        action="store_true",
+        help=(
+            "T0 was trained without EOS in its input sequences, which is the default in this script."
+            "However, T5 was pretrained with EOS in its input sequences. See README for more info."
+        ),
+    )
+    parser.add_argument(
+        "-db",
+        "--debug",
+        action="store_true",
+        help="Activate debug mode and run training only with a subset of data.",
+    )
+    parser.add_argument(
+        "-wb",
+        "--wandb_proj",
+        type=str,
+        default=None,
+        help="Project name for Weights & Biases. By default, W&B is disabled.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Especially important for few-shot example sampling.",
+    )
+    parser.add_argument(
+        "--config_name",
+        type=str,
+        default=None,
+        help="Pretrained config name or path if not the same as model_name",
+    )
+    parser.add_argument(
+        "--tokenizer_name",
+        type=str,
+        default=None,
+        help="Pretrained tokenizer name or path if not the same as model_name",
     )
     parser.add_argument(
         "--max_length",
@@ -109,80 +218,15 @@ def parse_args():
         help="If passed, pad all samples to `max_length`. Otherwise, dynamic padding is used.",
     )
     parser.add_argument(
-        "--model_name_or_path",
-        type=str,
-        help="Path to pretrained model or model identifier from huggingface.co/models. The list of T0 variants can be found on `https://huggingface.co/bigscience/T0_3B`",
-        required=True,
-    )
-    parser.add_argument(
-        "--config_name",
-        type=str,
-        default=None,
-        help="Pretrained config name or path if not the same as model_name",
-    )
-    parser.add_argument(
-        "--tokenizer_name",
-        type=str,
-        default=None,
-        help="Pretrained tokenizer name or path if not the same as model_name",
-    )
-    parser.add_argument(
         "--use_slow_tokenizer",
         action="store_true",
         help="If passed, will use a slow tokenizer (not backed by the 🤗 Tokenizers library).",
-    )
-    parser.add_argument(
-        "--per_device_eval_batch_size",
-        type=int,
-        default=8,
-        help="Batch size (per device) for the evaluation dataloader. Will be multiplied by the number of answer choices.",
-    )
-    parser.add_argument(
-        "-tb",
-        "--per_device_train_batch_size",
-        type=int,
-        default=8,
-        help="Batch size (per device) for the training dataloader.",
-    )
-    parser.add_argument(
-        "-ns",
-        "--num_shots",
-        type=int,
-        default=None,
-        help="Number of training examples for few-shot learning. Default is None, which uses the entire train set.",
-    )
-    parser.add_argument(
-        "-lr",
-        "--learning_rate",
-        type=float,
-        default=1e-4,
-        help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument(
         "--weight_decay",
         type=float,
         default=0.01,
         help="Weight decay for the AdamW optimizer."
-    )
-    parser.add_argument(
-        "-ep",
-        "--num_train_epochs",
-        type=int,
-        default=5,
-        help="Total number of training epochs to perform."
-    )
-    parser.add_argument(
-        "--max_train_steps",
-        type=int,
-        default=None,
-        help="Total number of training steps to perform. If provided, overrides num_train_epochs.",
-    )
-    parser.add_argument(
-        "-ga",
-        "--gradient_accumulation_steps",
-        type=int,
-        default=1,
-        help="Number of updates steps to accumulate before performing a backward/update pass.",
     )
     parser.add_argument(
         "--lr_scheduler_type",
@@ -196,40 +240,6 @@ def parse_args():
         type=int,
         default=0,
         help="Number of steps for the warmup in the lr scheduler."
-    )
-    parser.add_argument(
-        "--input_eos",
-        action="store_true",
-        help=(
-            "T0 was trained without EOS in its input sequences, which is the default in this script."
-            "However, T5 was pretrained with EOS in its input sequences. See README for more info."
-        ),
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help="Especially important for few-shot example sampling.",
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Activate debug mode and run training only with a subset of data.",
-    )
-    parser.add_argument(
-        "--parallelize",
-        action="store_true",
-        help=(
-            "If passed, will call `model.parallelize` which splits the model on all GPUs available when applicable (model parallelism). "
-            "Note that this feature is still experimental in HF Transformers."
-        ),
-    )
-    parser.add_argument(
-        "-wb",
-        "--wandb_proj",
-        type=str,
-        default=None,
-        help="Project name for Weights & Biases. By default, W&B is disabled.",
     )
     args = parser.parse_args()
 
@@ -358,8 +368,8 @@ def main():
 
     # Trim a number of evaluation examples
     if args.debug:
-        raw_train_dataset = raw_train_dataset.select(range(100))
-        raw_eval_dataset = raw_eval_dataset.select(range(100))
+        raw_train_dataset = raw_train_dataset.select(range(min(100, len(raw_train_dataset))))
+        raw_eval_dataset = raw_eval_dataset.select(range(min(100, len(raw_eval_dataset))))
 
     column_names = raw_eval_dataset.column_names
 
@@ -513,9 +523,7 @@ def main():
         eval_dataset = raw_eval_dataset.map(preprocess_eval, batched=True, remove_columns=column_names)
 
         if args.num_shots is not None:
-            max_index = len(raw_train_dataset) - args.num_shots
-            start_index = random.randint(0, max_index)
-            sample_indices = range(start_index, start_index + args.num_shots)
+            sample_indices = random.sample(range(0, len(raw_train_dataset)), k=args.num_shots)
             raw_train_dataset = raw_train_dataset.select(sample_indices)
         train_dataset = raw_train_dataset.map(preprocess_train, batched=True, remove_columns=column_names)
 
