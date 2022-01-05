@@ -14,9 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Reproduce the main evaluation in `Multitask Prompted Training Enables Zero-Shot Task Generalization` using PyTorch.
+Fine-tuning T0 in PyTorch, optionally few-shot.
 
-This script is heavily adapted from https://github.com/huggingface/transformers/blob/7533d30acd975027e83a548e4c38e06fa335291b/examples/pytorch/multiple-choice/run_swag_no_trainer.py
+This script is adapted from
+https://github.com/huggingface/transformers/blob/master/examples/pytorch/multiple-choice/run_swag_no_trainer.py
+as well as
+https://github.com/huggingface/transformers/blob/master/examples/pytorch/summarization/run_summarization_no_trainer.py
 """
 
 import argparse
@@ -57,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Reproduce main evaluation in T0.")
+    parser = argparse.ArgumentParser(description="Fine-tuning T0 in PyTorch, optionally few-shot.")
     parser.add_argument(
         "--dataset_name",
         type=str,
@@ -77,6 +80,13 @@ def parse_args():
         default=None,
         help="The template/prompt name",
         required=True,
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default=None,
+        required=True,
+        help="Where to store the results CSV and (TODO) optionally the final model."
     )
     parser.add_argument(
         "--max_length",
@@ -188,17 +198,18 @@ def parse_args():
         help="Number of steps for the warmup in the lr scheduler."
     )
     parser.add_argument(
+        "--input_eos",
+        action="store_true",
+        help=(
+            "T0 was trained without EOS in its input sequences, which is the default in this script."
+            "However, T5 was pretrained with EOS in its input sequences. See README for more info."
+        ),
+    )
+    parser.add_argument(
         "--seed",
         type=int,
         default=42,
         help="Especially important for few-shot example sampling.",
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default=None,
-        required=True,
-        help="Where to store the results CSV and (TODO) optionally the final model."
     )
     parser.add_argument(
         "--debug",
@@ -423,7 +434,7 @@ def main():
             padding=padding,
             max_length=args.max_length,
             truncation=True,
-            add_special_tokens=False,
+            add_special_tokens=args.input_eos,
         )
 
         with tokenizer.as_target_tokenizer():
@@ -432,6 +443,7 @@ def main():
                 padding=padding,
                 max_length=args.target_max_length,
                 truncation=True,
+                add_special_tokens=False,
             )
             model_inputs['labels'] = [
                 [(t if t != tokenizer.pad_token_id else -100) for t in targets]
