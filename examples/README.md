@@ -10,18 +10,18 @@ python single_task_fine_tune.py \
     --parallelize
 ```
 
-The evaluation per epoch results will be saved as a CSV file in `output_dir`. By default, it trains on the whole dataset. Optionally, you can pass `--num_shots` to train it on a random subset of examples.
+The per epoch evaluation results will be saved as a CSV file in the `output_dir`. By default, it trains on the whole dataset. Optionally, you can pass `--num_shots` to train it on a random subset of examples.
 
-Like the zero-shot inferencing [script](../evaluation/run_eval.py), you are expected to provide `dataset_name`, `dataset_config_name`, and `template_name`. You can find the list of templates per dataset is available in [this file](../evaluation/template_list.py), which were the ones we used in the T0 paper (and what's installed if you did `pip install -r requirements`.) However, [`promptsource`](https://github.com/bigscience-workshop/promptsource) is being continously updated, so if you don't intend to reproduce the exact results from our paper, you may want to install the latest `promptsource` and call, for example, `DatasetTemplates("super_glue", "rte").all_template_names` to access the new templates.
+Like the zero-shot inferencing [script](../evaluation/run_eval.py), you are expected to provide `dataset_name`, `dataset_config_name`, and `template_name`. You can find the list of templates per dataset in [this file](../evaluation/template_list.py); these were the templates we used in the T0 paper (and installed if you did `pip install -r requirements`.) However, [`promptsource`](https://github.com/bigscience-workshop/promptsource) is being continously updated, so if you don't intend to reproduce the exact results from our paper, you may want to install the latest `promptsource` and call, for example, `DatasetTemplates("super_glue", "rte").all_template_names` to access the new templates.
 
 
 ## Distributed Training
 
 Although still an experimental feature of 🤗 Transformers, the simplest way to train T0 is to pass the `--parallelize` flag as shown in the example above, which calls `model.parallize()` and splits the model over all visible GPUs.
 
-To train T0 3B, you need at least 42GB of GPU memory in theory, which in practice usually means at least two V100s, three RTX3090s, or a single A6000. For T0 11B, you need at least eight V100s. (If you don't need training and only need inferencing, then the VRAM requirement is about 1/4 of training, i.e., a single 3090 for T0 3B, or a single A6000 for T0 11B.)
+To train T0 3B, you need at least around 48GB of GPU memory in theory, which in practice usually means at least two V100s, three RTX3090s, or a single A6000. For T0 11B, you need at least eight V100s. (If you don't need training and only need inferencing, then the VRAM requirement is about 1/4 of training, i.e., a single 3090 for T0 3B, or a single A6000 for T0 11B.)
 
-Of course, you can further reduce the VRAM requirement by using [DeepSpeed](https://huggingface.co/docs/transformers/main_classes/deepspeed) with [`accelerate`](https://github.com/huggingface/accelerate). Please refer to their documentation for installation and configuration. And then run:
+Of course, you can further reduce the VRAM requirement by using [DeepSpeed](https://huggingface.co/docs/transformers/main_classes/deepspeed) with [`accelerate`](https://github.com/huggingface/accelerate). Please refer to their documentation for installation and configuration, and then run, for example:
 ```bash
 accelerate config
 accelerate test
@@ -35,7 +35,7 @@ accelerate launch single_task_fine_tune.py \
 
 ## Miscellaneous Notes
 
-1. If you just want to debug your code without running a large model taking up lots of resources, you can use `--model_name_or_path google/t5-base-lm-adapt`, which is the non-multitask-prompted-trained equivalent baseline of T0 that is available in much smaller sizes.
+1. If you just want to debug your code without running a large model taking up lots of resources, you can use `--model_name_or_path google/t5-base-lm-adapt`, which is the non-multitask-prompted-trained equivalent of T0 that is available in much smaller sizes.
 
 2. T0 was trained and evaluated without adding special EOS tokens in its input sequences, which is the default in `single_task_fine_tune.py`. However, T5 was pretrained with EOS in its input sequences, and we have noticed that adding EOS (using the `--input_eos` flag) sometimes improves the zero-shot and few-shot performance of T0.
 
