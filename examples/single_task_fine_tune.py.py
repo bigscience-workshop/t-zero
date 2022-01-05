@@ -197,6 +197,7 @@ def parse_args():
         "--output_dir",
         type=str,
         default=None,
+        required=True,
         help="Where to store the results CSV and (TODO) optionally the final model."
     )
     parser.add_argument(
@@ -357,7 +358,7 @@ def main():
     # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
     if args.config_name:
-        config = AutoConfig.from_pretrained(args.model_name_or_path)
+        config = AutoConfig.from_pretrained(args.config_name)
     elif args.model_name_or_path:
         config = AutoConfig.from_pretrained(args.model_name_or_path)
     else:
@@ -579,8 +580,8 @@ def main():
     )
 
     # Prepare everything with our `accelerator`.
-    optimizer, train_dataloader, eval_dataloader = accelerator.prepare(optimizer, train_dataloader, eval_dataloader)
-
+    model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
+        model, optimizer, train_dataloader, eval_dataloader)
 
     # Metrics
     metric = load_metric("accuracy")
@@ -631,7 +632,7 @@ def main():
                 global_steps += 1
                 loss = loss.item()
                 if accelerator.is_main_process:
-                    tqdm.write(f"{epoch = }, {global_steps = }, {loss = }")
+                    tqdm.write(f"epoch = {epoch}, step = {global_steps}, loss = {loss}")
                 if args.wandb_proj and accelerator.is_main_process:
                     wandb.log({"loss": loss}, step=global_steps)
 
