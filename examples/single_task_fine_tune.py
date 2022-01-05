@@ -72,13 +72,13 @@ def parse_args():
         "--dataset_config_name",
         type=str,
         default=None,
-        help="The configuration name of the dataset to use (via the datasets library).",
+        help="The configuration name (usually a subset) of the dataset to use (via the datasets library).",
     )
     parser.add_argument(
         "--template_name",
         type=str,
         default=None,
-        help="The template/prompt name",
+        help="The template/prompt name in `promptsource`.",
         required=True,
     )
     parser.add_argument(
@@ -550,17 +550,7 @@ def main():
         eval_collator = DataCollatorForMultipleChoice(
             tokenizer, pad_to_multiple_of=(8 if accelerator.use_fp16 else None)
         )
-
     eval_dataloader = DataLoader(eval_dataset, collate_fn=eval_collator, batch_size=args.per_device_eval_batch_size)
-
-    # Use the device given by the `accelerator` object.
-    device = accelerator.device
-    if args.parallelize:
-        num_gpus = torch.cuda.device_count()
-        assert num_gpus > 1, "You need at least 2 GPUs to use `model.parallelize()`."
-        model.parallelize()
-    else:
-        model.to(device)
 
     # Optimizer
     # Split weights in two groups, one with weight decay and the other not.
@@ -591,9 +581,15 @@ def main():
         num_training_steps=args.max_train_steps,
     )
 
-    # Prepare everything with our `accelerator`.
-    model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
-        model, optimizer, train_dataloader, eval_dataloader)
+    if args.parallelize:
+        num_gpus = torch.cuda.device_count()
+        assert num_gpus > 1, "You need at least 2 GPUs to use `model.parallelize()`."
+        model.parallelize()
+        optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
+            optimizer, train_dataloader, eval_dataloader)
+    else:
+        model, optimizer, train_dataloader, eval_dataloader = accelerator.prepare(
+            model, optimizer, train_dataloader, eval_dataloader)
 
     # Metrics
     metric = load_metric("accuracy")
@@ -651,7 +647,7 @@ def main():
             if global_steps >= args.max_train_steps:
                 break
 
-        # Evaluate every epoch; TODO(Albert) also to support eval by every x steps
+        # Evaluate every epoch
         total_batch_size = args.per_device_eval_batch_size * accelerator.num_processes
         logger.info("***** Running evaluation *****")
         logger.info(f"  Num examples = {len(eval_dataset)}")
@@ -690,7 +686,7 @@ def main():
             "template_name": args.template_name,
             "epoch": epoch,
             "step": global_steps,
-            "metric": 'accuracy (rank)',
+            "metric": 'accuracy',
             "score": score,
         })
         if args.wandb_proj and accelerator.is_main_process:
