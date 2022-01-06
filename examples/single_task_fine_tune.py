@@ -96,8 +96,11 @@ def parse_args():
         "-m",
         "--model_name_or_path",
         type=str,
-        help="Path to pretrained model or model identifier from huggingface.co/models. The list of T0 variants can be found on `https://huggingface.co/bigscience/T0_3B`",
         required=True,
+        help=(
+            "Path to pretrained model or model identifier from huggingface.co/models. "
+            "The list of T0 variants can be found on `https://huggingface.co/bigscience/T0_3B`"
+        ),
     )
     parser.add_argument(
         "-pa",
@@ -180,24 +183,28 @@ def parse_args():
         help="Project name for Weights & Biases. By default, W&B is disabled.",
     )
     parser.add_argument(
+        "-sd",
         "--seed",
         type=int,
         default=42,
         help="Especially important for few-shot example sampling.",
     )
     parser.add_argument(
+        "-cf",
         "--config_name",
         type=str,
         default=None,
         help="Pretrained config name or path if not the same as model_name",
     )
     parser.add_argument(
+        "-tk",
         "--tokenizer_name",
         type=str,
         default=None,
         help="Pretrained tokenizer name or path if not the same as model_name",
     )
     parser.add_argument(
+        "-il",
         "--max_length",
         type=int,
         default=1024,
@@ -207,28 +214,33 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        "-tl",
         "--target_max_length",
         type=int,
         default=256,
         help="Target max length. Sequences longer than this will be truncated."
     )
     parser.add_argument(
+        "-pml",
         "--pad_to_max_length",
         action="store_true",
         help="If passed, pad all samples to `max_length`. Otherwise, dynamic padding is used.",
     )
     parser.add_argument(
+        "-st",
         "--use_slow_tokenizer",
         action="store_true",
         help="If passed, will use a slow tokenizer (not backed by the 🤗 Tokenizers library).",
     )
     parser.add_argument(
+        "-wd",
         "--weight_decay",
         type=float,
         default=0.01,
         help="Weight decay for the AdamW optimizer."
     )
     parser.add_argument(
+        "-ls",
         "--lr_scheduler_type",
         type=SchedulerType,
         default="linear",
@@ -236,6 +248,7 @@ def parse_args():
         choices=["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"],
     )
     parser.add_argument(
+        "-ws",
         "--num_warmup_steps",
         type=int,
         default=0,
