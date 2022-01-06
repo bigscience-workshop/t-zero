@@ -6,13 +6,13 @@ python single_task_fine_tune.py \
     --dataset_config_name rte \
     --template_name "does this imply" \
     --model_name_or_path bigscience/T0_3B \
-    --output_dir ./debug
+    --output_dir ./debug \
     --parallelize
 ```
 
 The per epoch evaluation results will be saved as a CSV file in the `output_dir`. By default, it trains on the whole dataset. Optionally, you can pass `--num_shots` to train it on a random subset of examples.
 
-Like the zero-shot inferencing [script](../evaluation/run_eval.py), you are expected to provide `dataset_name`, `dataset_config_name`, and `template_name`. You can find the list of templates per dataset in [this file](../evaluation/template_list.py); these were the templates we used in the T0 paper (and installed if you did `pip install -r requirements`.) However, [`promptsource`](https://github.com/bigscience-workshop/promptsource) is being continously updated, so if you don't intend to reproduce the exact results from our paper, you may want to install the latest `promptsource` and call, for example, `DatasetTemplates("super_glue", "rte").all_template_names` to access the new templates.
+Like the zero-shot evaluation [script](../evaluation/run_eval.py), you are expected to provide `dataset_name`, `dataset_config_name`, and `template_name`. You can find the list of templates per dataset in [this file](../evaluation/template_list.py); these were the templates we used in the T0 paper (and installed if you did `pip install -r requirements`.) However, [`promptsource`](https://github.com/bigscience-workshop/promptsource) is being continously updated, so if you don't intend to reproduce the exact results from our paper, you may want to install the latest `promptsource` and call, for example, `DatasetTemplates("super_glue", "rte").all_template_names` to access the new templates.
 
 
 ## Distributed Training
@@ -39,7 +39,7 @@ accelerate launch single_task_fine_tune.py \
 
 2. T0 was trained and evaluated without adding special EOS tokens in its input sequences, which is the default in `single_task_fine_tune.py`. However, T5 was pretrained with EOS in its input sequences, and we have noticed that adding EOS (using the `--input_eos` flag) sometimes improves the zero-shot and few-shot performance of T0.
 
-3. Due to a bug in the split names of ANLI, if you train or evaluate on ANLI , the `dataset_config_name` should be `train_r1`, `dev_r1`, `train_r2`,  `dev_r2`, etc., corresponding to its 3 rounds of adversarial filtering.
+3. If you train or evaluate on ANLI , the `dataset_config_name` should be `train_r1`, `dev_r1`, `train_r2`,  `dev_r2`, etc., corresponding to its 3 rounds of adversarial filtering.
 
 4. The estimated GPU memory requirement above assumes using the AdamW optimizer. Note that T0 was trained (in Mesh TensorFlow) with Adafactor, which is much more memory efficient. However, we found that using PyTorch's implementation of Adafactor converges nontrivially worse than AdamW. Of course, you're free to experiment with Adafactor. See the “additional training tips” section [here](https://huggingface.co/docs/transformers/master/en/model_doc/t5#training). If you have success with Adafactor, feel free to open an issue and we might update this readme.
 
