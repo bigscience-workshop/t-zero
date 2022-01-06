@@ -40,8 +40,8 @@ from transformers import (
 )
 from promptsource.templates import DatasetTemplates
 
-from .data_collator import DataCollatorForMultipleChoice
-from .model import ModelBase
+from t0.data_collator import DataCollatorForMultipleChoice
+from t0.model import ModelBase
 
 logger = logging.getLogger(__name__)
 
