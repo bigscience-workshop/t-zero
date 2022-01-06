@@ -81,7 +81,7 @@ class DecoderModel(ModelBase):
             self._model = AutoModelForCausalLM.from_config(config)
 
     def forward(self, batch):
-        batch_size, prefix_length = batch["input_ids"].shape
+        _, prefix_length = batch["input_ids"].shape
         model_inputs = {
             "input_ids": torch.cat([batch["input_ids"], batch["labels"]], dim=-1),
             "attention_mask": torch.cat([batch["attention_mask"], batch["labels_attention_mask"]], dim=-1),
