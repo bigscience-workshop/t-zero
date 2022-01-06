@@ -19,19 +19,9 @@ Like the zero-shot evaluation [script](../evaluation/run_eval.py), you are expec
 
 Although still an experimental feature of 🤗 Transformers, the simplest way to train T0 is to pass the `--parallelize` flag as shown in the example above, which calls `model.parallize()` and splits the model over all visible GPUs.
 
-To train T0 3B, you need at least around 48GB of GPU memory in theory, which in practice usually means at least two V100s, three RTX3090s, or a single A6000. For T0 11B, you need at least eight V100s. (If you don't need training and only need inferencing, then the VRAM requirement is about 1/4 of training, i.e., a single 3090 for T0 3B, or a single A6000 for T0 11B.)
+To train T0 3B, you need at least around 48GB of GPU memory in theory, which in practice usually means at least two V100s (32GB version), three RTX3090s, or a single A6000. For T0 11B, you need at least eight V100s. (If you don't need training and only need inferencing, then the VRAM requirement is about 1/4 of training, i.e., a single 3090 for T0 3B, or a single A6000 for T0 11B.)
 
-Of course, you can further reduce the VRAM requirement by using [DeepSpeed](https://huggingface.co/docs/transformers/main_classes/deepspeed) with [`accelerate`](https://github.com/huggingface/accelerate). Please refer to their documentation for installation and configuration, and then run, for example:
-```bash
-accelerate config
-accelerate test
-accelerate launch single_task_fine_tune.py \
-    --dataset_name super_glue \
-    --dataset_config_name rte \
-    --template_name "does this imply" \
-    --model_name_or_path bigscience/T0_3B \
-    --output_dir ./debug
-```
+Of course, you can further reduce the VRAM requirement by using [DeepSpeed](https://huggingface.co/docs/transformers/main_classes/deepspeed) with [`accelerate`](https://github.com/huggingface/accelerate). Please refer to their documentation for installation and configuration.
 
 ## Miscellaneous Notes
 
