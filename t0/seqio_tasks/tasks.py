@@ -151,7 +151,7 @@ d4_train: Dict[str, List[datatset_subset_tuple]] = {
 }
 
 gsheet: Dict[datatset_subset_tuple, Dict] = {}
-experiment_path = pkg_resources.resource_filename(__name__, "experiment_D4.csv")
+experiment_path = pkg_resources.resource_filename(__name__, "../datasets.csv")
 with open(experiment_path) as exp_file:
     reader = csv.DictReader(exp_file)
     for row in reader:

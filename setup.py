@@ -23,7 +23,7 @@ setup(
     license="Apache Software License 2.0",
     long_description=readme,
     install_requires=[
-        "promptsource",
+        "git+git://github.com/bigscience-workshop/promptsource@v0.1.0",
         "accelerate",
         "transformers",
         "torch",
@@ -43,7 +43,7 @@ setup(
     },
     package_data={
         "": [
-            "seqio_tasks/experiment_D4.csv",
+            "seqio_tasks/datasets.csv",
         ]
     }
 )
