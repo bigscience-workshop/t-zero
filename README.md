@@ -6,6 +6,13 @@ T0 is the model developed in [Multitask Prompted Training Enables Zero-Shot Task
 
 While the codebase in this repository mainly reproduces and replicates the training and evaluation of T0, it will be useful for future research on massively multitask fine-tuning.
 
+## Setup
+
+1. Download the repo
+2. Navigate to root directory of the repo
+3. Install requirements with `pip install -r requirements.txt` in a Python 3.7 environment
+4. Run `pip install -e .` to install the `t0` module
+
 ## Contents
 
 - [Training](training/README.md): reproducing (or replicating) the massively multitask fine-tuning
