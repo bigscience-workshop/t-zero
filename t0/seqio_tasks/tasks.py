@@ -138,11 +138,11 @@ def add_task(dataset_name, subset_name, template_name, task_name=None, split_map
 
 
 datatset_subset_tuple = Tuple[str, Optional[str]]
-d4_eval: Dict[str, List[datatset_subset_tuple]] = {
+t0_eval: Dict[str, List[datatset_subset_tuple]] = {
     "BASE": [],
     "BIAS_FAIRNESS": []
 }
-d4_train: Dict[str, List[datatset_subset_tuple]] = {
+t0_train: Dict[str, List[datatset_subset_tuple]] = {
     "BASE": [],
     # GPT3 evaluation set
     "GPT_EVAL": [],
@@ -163,23 +163,23 @@ with open(experiment_path) as exp_file:
             # sanity checks
             if do_train_source == "SGLUE":
                 assert dataset_subset[0] == "super_glue"
-            d4_train[do_train_source].append(dataset_subset)
+            t0_train[do_train_source].append(dataset_subset)
         if row["do_eval"] != "":
             do_eval_source = row["do_eval"]
             # sanity checks
             if do_eval_source == "BIAS_FAIRNESS":
                 assert row["task_by_convention"] == "bias_and_fairness"
-            d4_eval[do_eval_source].append(dataset_subset)
+            t0_eval[do_eval_source].append(dataset_subset)
         gsheet[dataset_subset] = row
 
-all_datasets = sum(d4_train.values(), []) + sum(d4_eval.values(), [])
+all_datasets = sum(t0_train.values(), []) + sum(t0_eval.values(), [])
 
 all_templates = promptsource.templates.TemplateCollection()
 all_templates.remove("anli")  # Need to special-case ANLI due to weird split conventions
 
 # 3 stages of training/ablation: D4 -> GPT -> SuperGLUE
-d4_train_mixture: Dict[str,List[str]] = {key: [] for key in d4_train}
-d4_eval_mixture: Dict[str,List[str]] = {key: [] for key in d4_eval}
+t0_train_mixture: Dict[str,List[str]] = {key: [] for key in t0_train}
+t0_eval_mixture: Dict[str,List[str]] = {key: [] for key in t0_eval}
 mixture_cap: Dict[str, int] = {}
 single_original_task: Dict[Tuple[str, str], str] = {}
 all_original_tasks: List[str] = []
@@ -212,19 +212,19 @@ for dataset_name, subset_name in all_templates.keys:
         if template.metadata.original_task:
             all_original_tasks.append(task_name)
 
-        # Check that the dataset_subset_tuple is in d4_train
-        for key, dataset_subset_tuples in d4_train.items():
+        # Check that the dataset_subset_tuple is in t0_train
+        for key, dataset_subset_tuples in t0_train.items():
             if (dataset_name, subset_name) in dataset_subset_tuples:
-                d4_train_mixture[key].append(task_name)
+                t0_train_mixture[key].append(task_name)
                 mixture_cap[task_name] = cap
 
-        # Check that the dataset_subset_tuple is in d4_eval
-        if (dataset_name, subset_name) in d4_eval["BASE"]:
+        # Check that the dataset_subset_tuple is in t0_eval
+        if (dataset_name, subset_name) in t0_eval["BASE"]:
             if template.metadata.original_task:
-                d4_eval_mixture["BASE"].append(task_name)
+                t0_eval_mixture["BASE"].append(task_name)
             # TODO use template.metadata.answer_choices here for rank eval
-        if (dataset_name, subset_name) in d4_eval["BIAS_FAIRNESS"]:
-            d4_eval_mixture["BIAS_FAIRNESS"].append(task_name)
+        if (dataset_name, subset_name) in t0_eval["BIAS_FAIRNESS"]:
+            t0_eval_mixture["BIAS_FAIRNESS"].append(task_name)
 
 # Special case for ANLI, which has weirdly-named splits and rounds that should be subsets
 dataset_name, subset_name = ("anli", None)
@@ -241,7 +241,7 @@ for anli_round in ("r1", "r2", "r3"):
 
         template = dataset[template_name]
         if template.metadata.original_task:
-            d4_eval_mixture["BASE"].append(task_name)  # TODO or add to ANLI special mixture
+            t0_eval_mixture["BASE"].append(task_name)  # TODO or add to ANLI special mixture
         # TODO use template.metadata.answer_choices here for rank eval
 
 
@@ -296,30 +296,30 @@ D4_TRAIN_SCORE_EVAL_TASK_BLACKLIST = [
 ]
 
 seqio.MixtureRegistry.add(
-    "d4_train",
-    [task for task in d4_train_mixture["BASE"] if task not in TASK_BLACKLIST],
+    "t0_train",
+    [task for task in t0_train_mixture["BASE"] if task not in TASK_BLACKLIST],
     default_rate=lambda t: mixture_cap[t.name],
 )
 
 seqio.MixtureRegistry.add(
-    "d4_gpt_eval_train",
-    [task for task in d4_train_mixture["BASE"] + d4_train_mixture["GPT_EVAL"] if task not in TASK_BLACKLIST],
+    "t0+_train",
+    [task for task in t0_train_mixture["BASE"] + t0_train_mixture["GPT_EVAL"] if task not in TASK_BLACKLIST],
     default_rate=lambda t: mixture_cap[t.name],
 )
 
 seqio.MixtureRegistry.add(
-    "d4_gpt_sglue_train",
-    [task for task in d4_train_mixture["BASE"] + d4_train_mixture["GPT_EVAL"] + d4_train_mixture["SGLUE"] if task not in TASK_BLACKLIST],
+    "t0++_train",
+    [task for task in t0_train_mixture["BASE"] + t0_train_mixture["GPT_EVAL"] + t0_train_mixture["SGLUE"] if task not in TASK_BLACKLIST],
     default_rate=lambda t: mixture_cap[t.name],
 )
 
 seqio.MixtureRegistry.add(
-    "d4_eval_score_eval",
+    "t0_eval_score_eval",
     [
         task
         for task in seqio.TaskRegistry.names()
         if task.endswith("_score_eval")
-        and task.split("_score_eval")[0] in d4_eval_mixture["BASE"]
+        and task.split("_score_eval")[0] in t0_eval_mixture["BASE"]
         and task.split("_score_eval")[0] not in TASK_BLACKLIST
     ],
     default_rate=functools.partial(seqio.mixing_rate_num_examples, maximum=500_000),
@@ -344,12 +344,12 @@ D4_TRAIN_SKIP_EVAL = [
 ]
 
 seqio.MixtureRegistry.add(
-    "d4_train_score_eval",
+    "t0_train_score_eval",
     [
         task
         for task in seqio.TaskRegistry.names()
         if task.endswith("_score_eval")
-        and task.split("_score_eval")[0] in d4_train_mixture["BASE"]
+        and task.split("_score_eval")[0] in t0_train_mixture["BASE"]
         and task.split("_score_eval")[0] not in TASK_BLACKLIST
         and task not in D4_TRAIN_SCORE_EVAL_TASK_BLACKLIST
         and not any([skip in task for skip in D4_TRAIN_SKIP_EVAL])
@@ -359,14 +359,14 @@ seqio.MixtureRegistry.add(
 )
 
 seqio.MixtureRegistry.add(
-    "d4_train_one_og_prompt",
-    [task for task in single_original_task.values() if task in d4_train_mixture["BASE"] and task not in TASK_BLACKLIST],
+    "t0_train_one_og_prompt",
+    [task for task in single_original_task.values() if task in t0_train_mixture["BASE"] and task not in TASK_BLACKLIST],
     default_rate=lambda t: mixture_cap[t.name],
 )
 
 seqio.MixtureRegistry.add(
-    "d4_train_all_og_prompts",
-    [task for task in all_original_tasks if task in d4_train_mixture["BASE"] and task not in TASK_BLACKLIST],
+    "t0_train_all_og_prompts",
+    [task for task in all_original_tasks if task in t0_train_mixture["BASE"] and task not in TASK_BLACKLIST],
     default_rate=lambda t: mixture_cap[t.name],
 )
 
@@ -375,7 +375,7 @@ seqio.MixtureRegistry.add(
     [
         task
         for task in seqio.TaskRegistry.names()
-        if task.endswith("_score_eval") and task.split("_score_eval")[0] in d4_eval_mixture["BIAS_FAIRNESS"]
+        if task.endswith("_score_eval") and task.split("_score_eval")[0] in t0_eval_mixture["BIAS_FAIRNESS"]
     ],
     default_rate=functools.partial(seqio.mixing_rate_num_examples, maximum=500_000),
 )

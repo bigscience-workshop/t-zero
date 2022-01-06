@@ -17,7 +17,7 @@ Like the zero-shot evaluation [script](../evaluation/run_eval.py), you are expec
 import seqio
 import promptsource.seqio_tasks
 
-for task in seqio.MixtureRegistry.get("d4_eval_score_train").tasks:
+for task in seqio.MixtureRegistry.get("t0_eval_score_train").tasks:
     print(task.name)
 ```
 

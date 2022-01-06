@@ -24,7 +24,7 @@ You are expected to modify the `dataset_name`, the `dataset_config_name` and the
 import seqio
 import t0.seqio_tasks
 
-for task in seqio.MixtureRegistry.get("d4_eval_score_eval").tasks:
+for task in seqio.MixtureRegistry.get("t0_eval_score_eval").tasks:
     print(task.name)
 ```
 

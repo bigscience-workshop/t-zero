@@ -26,14 +26,14 @@ The full list of tasks in the mixture is obtained with the following code snippe
 import seqio
 import promptsource.seqio_tasks
 
-for task in seqio.MixtureRegistry.get("d4_gpt_sglue_train").tasks:
+for task in seqio.MixtureRegistry.get("t0++_train").tasks:
     print(task.name)
 ```
 
 You'll likely be interested in the following mixtures:
-- `d4_train`: training mixture for T0
-- `d4_gpt_train`: training mixture for T0+
-- `d4_gpt_sglue_train`: training mixture for T0++
+- `t0_train`: training mixture for T0
+- `t0+_train`: training mixture for T0+
+- `t0++_train`: training mixture for T0++
 
 For reproducibility, we have released an [already cached version of the data](https://huggingface.co/datasets/bigscience/P3), which means you don't need to cache the data yourself. The only exception is [Story Cloze](https://cs.rochester.edu/nlp/rocstories/), which requires filling a form to download the data. Please refer to the previous SeqIO command to cache the tasks related to Story Cloze once you have the dataset.
 
@@ -56,7 +56,7 @@ export BUCKET=gs://your_bucket/
 export CACHE_DIR="${BUCKET}/your_cache_dir"
 export MODEL_DIR="${BUCKET}/your_model_dir"
 
-export MIXTURE_NAME="d4_gpt_sglue_train"
+export MIXTURE_NAME="t0++_train"
 export TRAIN_STEPS=1112200
 
 t5_mesh_transformer \
@@ -93,7 +93,7 @@ export BUCKET=gs://your_bucket/
 export CACHE_DIR="${BUCKET}/your_cache_dir"
 export MODEL_DIR="${BUCKET}/your_model_dir"
 
-export EVAL_MIXTURE_NAME="d4_score_eval"
+export EVAL_MIXTURE_NAME="t0_eval_score_eval"
 export TRAIN_STEPS=1112200
 
 t5_mesh_transformer \
