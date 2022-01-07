@@ -19,14 +19,7 @@ python run_eval.py \
     --output_dir ./debug
 ```
 
-You are expected to modify the `dataset_name`, the `dataset_config_name` and the `template_name`. The templates used for T0 evaluation can be generated like the following,
-```python
-import seqio
-import t0.seqio_tasks
-
-for task in seqio.MixtureRegistry.get("t0_eval_score_eval").tasks:
-    print(task.name)
-```
+You are expected to modify the `dataset_name`, the `dataset_config_name` and the `template_name`. The list of templates per data(sub)set is available in [this file](template_list.py).
 
 If you evaluate on ANLI (R1, R2 or R3), the `dataset_config_name` should be `dev_r1`, `dev_r2` or `dev_r3`.
 
