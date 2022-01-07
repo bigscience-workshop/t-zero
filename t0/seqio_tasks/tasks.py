@@ -1,3 +1,16 @@
+"""
+This file defines 8 mixtures that we used in the T-Zero paper:
+- t0_train: T0 training mixture
+- t0+_train: T0+ training mixture
+- t0++_train: T0++ training mixture
+- t0_eval_score_eval: T0 main evaluation mixture (Figure 4 for instance)
+- t0_train_score_eval: Evaluation mixture for checkpoint selection on T0 (validation splits of the training sets)
+- t0_train_one_og_prompt: T0 (p=1) training mixture for  - one original-task prompt per dataset. Figure 6
+- t0_train_all_og_prompts: T0 (p=5.7) training mixture for - all original-task prompts for all datasets. Figure 6
+- bias_fairness_eval_score_eval: Bias & fairness evaluation mixture. Appendix B3
+"""
+
+
 import csv
 import functools
 from typing import Dict, List, Optional, Tuple
