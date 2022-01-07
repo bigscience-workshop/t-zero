@@ -12,7 +12,7 @@ python single_task_fine_tune.py \
 
 The per epoch evaluation results will be saved as a CSV file in the `output_dir`. By default, it trains on the whole dataset. Optionally, you can pass `--num_shots` to train it on a random subset of examples.
 
-Like the zero-shot evaluation [script](../evaluation/run_eval.py), you are expected to provide `dataset_name`, `dataset_config_name`, and `template_name`. You can find the list of templates per dataset in [this file](../evaluation/template_list.py); these were the templates we used in the T0 paper. However, [`promptsource`](https://github.com/bigscience-workshop/promptsource) is being continously updated, so if you don't intend to reproduce the exact results from our paper, you may want to install the latest `promptsource` and call, for example, `DatasetTemplates("super_glue", "rte").all_template_names` to access the new templates.
+Like the zero-shot evaluation [script](../evaluation/run_eval.py), you are expected to provide `dataset_name`, `dataset_config_name`, and `template_name`. You can find the list of templates per dataset in [this file](../evaluation/template_list.py); these were the templates we used in the T0 paper. In `setup.py`, [`promptsource`](https://github.com/bigscience-workshop/promptsource) is pinned to v0.1.0, the version we used in the T0 paper to facilitate reproduction and replication. However, `promptsource` is being continously updated, so if you don't intend to reproduce the exact results from our paper, you may want to install the latest `promptsource` and call, for example, `DatasetTemplates("super_glue", "rte").all_template_names` to access the new templates.
 
 
 ## Distributed Training
