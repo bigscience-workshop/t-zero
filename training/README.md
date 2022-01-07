@@ -4,7 +4,7 @@ This section explains how to reproduce the T0 training: a massively multitask fi
 
 We also release code to replicate this training in PyTorch (see [Replicating the training in PyTorch](#replicating-the-training-in0-PyTorch)).
 
-Before starting, please make sure you have installed the dependencies listed in [`requirements.txt`](https://github.com/bigscience-workshop/t-zero/blob/master/requirements.txt).
+Before starting, please make sure you have installed the t0 package by following the setup procedure.
 
 ## Data preparation
 
