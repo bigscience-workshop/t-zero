@@ -17,7 +17,7 @@ from typing import Dict, List, Optional, Tuple
 
 import datasets
 import pkg_resources
-import promptsource.templates
+from promptsource import templates
 import seqio
 import t5
 from t5.data.glue_utils import get_glue_metric, get_super_glue_metric
@@ -187,7 +187,7 @@ with open(experiment_path) as exp_file:
 
 all_datasets = sum(t0_train.values(), []) + sum(t0_eval.values(), [])
 
-all_templates = promptsource.templates.TemplateCollection()
+all_templates = templates.TemplateCollection()
 all_templates.remove("anli")  # Need to special-case ANLI due to weird split conventions
 
 # 3 stages of training/ablation: D4 -> GPT -> SuperGLUE
