@@ -82,5 +82,25 @@ template_list = {
         "GPT-3-prompt-with-label",
         "polysemous",
         "similar-sense",
+    ],
+    ("hellaswag", None): [
+        "Predict ending with hint",
+        "Randomized prompts template",
+        "complete_first_then",
+        "if_begins_how_continues",
+    ],
+    ("super_glue", "copa"): [
+        "exercise",
+        "…What could happen next, C1 or C2?",
+        "i_am_hesitating",
+        "plausible_alternatives",
+        "C1 or C2? premise, so/because…",
+        "…As a result, C1 or C2?",
+        "best_option",
+        "…which may be caused by",
+        "more likely",
+        "cause_effect",
+        "…why? C1 or C2",
+        "choose",
     ]
 }

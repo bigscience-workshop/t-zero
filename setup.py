@@ -22,4 +22,28 @@ setup(
     packages=find_packages(),
     license="Apache Software License 2.0",
     long_description=readme,
+    install_requires=[
+        "promptsource @ git+git://github.com/bigscience-workshop/promptsource@v0.1.0",
+        "accelerate",
+        "transformers",
+        "torch",
+        "datasets",
+        "jinja2",
+        "datasets",
+        "sentencepiece",
+        "protobuf",
+        "scikit-learn"
+    ],
+    extras_require={
+        "seqio_tasks": [
+            "seqio",
+            "t5",
+            "tensorflow",
+        ]
+    },
+    package_data={
+        "": [
+            "seqio_tasks/datasets.csv",
+        ]
+    }
 )
