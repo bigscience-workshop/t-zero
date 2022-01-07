@@ -10,8 +10,8 @@ While the codebase in this repository mainly reproduces and replicates the train
 
 1. Download the repo
 2. Navigate to root directory of the repo
-3. Install requirements with `pip install -r requirements.txt` in a Python 3.7 environment
-4. Run `pip install -e .` to install the `t0` module
+3. Run `pip install -e .` to install the `t0` module. Depending on your application you can run multiple flavors:
+   1. `seqio_tasks`: Provide original seqio tasks used for the massively multitask fine-tuning. You can run `pip install -e .[seqio_tasks]` to install the extra requirements.
 
 ## Contents
 

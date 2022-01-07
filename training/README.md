@@ -4,9 +4,11 @@ This section explains how to reproduce the T0 training: a massively multitask fi
 
 We also release code to replicate this training in PyTorch (see [Replicating the training in PyTorch](#replicating-the-training-in0-PyTorch)).
 
-Before starting, please make sure you have installed the dependencies listed in [`requirements.txt`](https://github.com/bigscience-workshop/t-zero/blob/master/requirements.txt).
+Before starting, please make sure you have installed the t0 package by following the setup procedure.
 
 ## Data preparation
+
+*Please make sure you first install the corresponding dependencies: `pip install -e .[seqio_tasks]`.*
 
 The first step is to cache the data. We used [SeqIO](https://github.com/google/seqio), a library for processing sequential data to be fed into downstream sequence models. Essentially, SeqIO tokenizes (and caches) the input/target pairs and handles the training and evaluation mixtures.
 
@@ -17,14 +19,14 @@ TASK=yelp_review_full_based_on_that
 seqio_cache_tasks \
    --tasks=$TASK \
    --output_cache_dir=$MY_FAVORITE_OUTPUT_DIR \
-   --module_import=promptsource.seqio_tasks
+   --module_import=t0.seqio_tasks
 ```
 
 The full list of tasks in the mixture is obtained with the following code snippet:
 
 ```python
 import seqio
-import promptsource.seqio_tasks
+import t0.seqio_tasks
 
 for task in seqio.MixtureRegistry.get("t0++_train").tasks:
     print(task.name)
@@ -36,8 +38,6 @@ You'll likely be interested in the following mixtures:
 - `t0++_train`: training mixture for T0++
 
 For reproducibility, we have released an [already cached version of the data](https://huggingface.co/datasets/bigscience/P3), which means you don't need to cache the data yourself. The only exception is [Story Cloze](https://cs.rochester.edu/nlp/rocstories/), which requires filling a form to download the data. Please refer to the previous SeqIO command to cache the tasks related to Story Cloze once you have the dataset.
-
-Please also note that the module `promptsource.seqio_tasks` will be merged into the current repository. This is [WIP](https://github.com/bigscience-workshop/t-zero/issues/6).
 
 ## Reproducing training in Mesh Tensorflow
 
@@ -65,7 +65,7 @@ t5_mesh_transformer \
     --tpu_zone="${ZONE}" \
     --model_dir="${MODEL_DIR}"\
     --additional_task_cache_dirs="${CACHE_DIR}" \
-    --module_import="promptsource.seqio_tasks" \
+    --module_import="t0.seqio_tasks" \
     --gin_file="dataset.gin" \
     --gin_param="MIXTURE_NAME = '${MIXTURE_NAME}'" \
     --gin_file="gs://t5-data/pretrained_models/t5.1.1.lm100k.xxl/operative_config.gin" \
@@ -103,7 +103,7 @@ t5_mesh_transformer \
     --model_dir="${MODEL_DIR}" \
     --gin_file="${MODEL_DIR}/operative_config.gin" \
     --additional_task_cache_dirs="${CACHE_DIR}" \
-    --module_import="promptsource.seqio_tasks" \
+    --module_import="t0.seqio_tasks" \
     --gin_file="score_eval.gin" \
     --gin_param="MIXTURE_NAME = '${EVAL_MIXTURE_NAME}'" \
     --gin_param="utils.tpu_mesh_shape.tpu_topology = '${TPU_SIZE}'" \
