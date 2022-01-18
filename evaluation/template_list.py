@@ -4,7 +4,7 @@ template_list = {
         "guaranteed true",
         "can we infer",
         "GPT-3 style",
-        "does this impl",
+        "does this imply",
         "should assume",
         "does it follow that",
         "based on the previous passage",
