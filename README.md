@@ -19,6 +19,17 @@ While the codebase in this repository mainly reproduces and replicates the train
 - [Evaluation](evaluation/README.md): reproducing the main results reported in the paper
 - [Inference](inference/README.md): running inference with T0
 
+## Release checkpoints
+
+Below are the links to the models we have trained to write the paper. We recommend using [the T0++ checkpoint](https://huggingface.co/bigscience/T0pp) as it leads (on average) to the best performances on a variety of NLP tasks. A version of T0 with 3 billion parameters ([T0 3B](https://huggingface.co/bigscience/T0pp)) is also available.
+
+- T-Zero: https://huggingface.co/bigscience/T0
+- T-Zero +: https://huggingface.co/bigscience/T0p
+- T-Zero ++: https://huggingface.co/bigscience/T0pp
+- T-Zero Single Prompt: https://huggingface.co/bigscience/T0_single_prompt
+- T-Zero Original Task Only: https://huggingface.co/bigscience/T0_original_task_only
+- T-Zero 3B: https://huggingface.co/bigscience/T0_3B
+
 ## Citation
 
 If you find this resource useful, please cite the paper introducing T0:
