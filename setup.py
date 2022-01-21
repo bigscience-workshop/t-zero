@@ -43,7 +43,7 @@ setup(
     },
     package_data={
         "": [
-            "seqio_tasks/datasets.csv",
+            "datasets.csv",
         ]
     }
 )
