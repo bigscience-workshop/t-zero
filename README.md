@@ -18,10 +18,15 @@ While the codebase in this repository mainly reproduces and replicates the train
 - [Training](training/README.md): reproducing (or replicating) the massively multitask fine-tuning
 - [Evaluation](evaluation/README.md): reproducing the main results reported in the paper
 - [Inference](inference/README.md): running inference with T0
+- [Examples](examples/README.md): fine-tuning T0 with additional datasets or prompts.
 
-## Release checkpoints
+## Released checkpoints
 
-Below are the links to the models we have trained to write the paper. We recommend using [the T0++ checkpoint](https://huggingface.co/bigscience/T0pp) as it leads (on average) to the best performances on a variety of NLP tasks. A version of T0 with 3 billion parameters ([T0 3B](https://huggingface.co/bigscience/T0pp)) is also available.
+Below are the links to the models reported in our paper. We recommend using [the T0++ checkpoint](https://huggingface.co/bigscience/T0pp) as it yields the best performance on the most tasks. Meanwhile, the [T0](https://huggingface.co/bigscience/T0) and [T0+](https://huggingface.co/bigscience/T0p) checkpoints are intended for zero-shot evaluations on held-out tasks. See Sections 3 and 5 of our paper for more details.
+
+If you don’t have enough resources to run T0, a smaller version with 3 billion parameters ([T0 3B](https://huggingface.co/bigscience/T0pp)) is also available. Note that it is trained with same mixture of datasets as T0 (not T0++).
+
+Lastly, if you want to study the effect of multitask prompted training (a.k.a. instruction tuning) itself, the checkpoints from our ablation studies may be helpful. [T0 Single Prompt](https://huggingface.co/bigscience/T0_single_prompt) trains on one prompt per dataset, while [T0 Original Task Only](https://huggingface.co/bigscience/T0_original_task_only) trains on an average of 5.7 prompts per datasets (cf. T0 vanilla trains on 8.03 prompts per dataset). Using this series of checkpoints allows you to measure, for example, as you increase the number of prompts per dataset, how the performance on some held-out X increases/decreases or behavior on a linguistic diagnostic set changes. See Section 6.2 of our paper for more details.
 
 - T-Zero: https://huggingface.co/bigscience/T0
 - T-Zero +: https://huggingface.co/bigscience/T0p
@@ -35,12 +40,11 @@ Below are the links to the models we have trained to write the paper. We recomme
 If you find this resource useful, please cite the paper introducing T0:
 
 ```bibtex
-@misc{sanh2021multitask,
-      title={Multitask Prompted Training Enables Zero-Shot Task Generalization},
-      author={Victor Sanh and Albert Webson and Colin Raffel and Stephen H. Bach and Lintang Sutawika and Zaid Alyafeai and Antoine Chaffin and Arnaud Stiegler and Teven Le Scao and Arun Raja and Manan Dey and M Saiful Bari and Canwen Xu and Urmish Thakker and Shanya Sharma Sharma and Eliza Szczechla and Taewoon Kim and Gunjan Chhablani and Nihal Nayak and Debajyoti Datta and Jonathan Chang and Mike Tian-Jian Jiang and Han Wang and Matteo Manica and Sheng Shen and Zheng Xin Yong and Harshit Pandey and Rachel Bawden and Thomas Wang and Trishala Neeraj and Jos Rozen and Abheesht Sharma and Andrea Santilli and Thibault Fevry and Jason Alan Fries and Ryan Teehan and Stella Biderman and Leo Gao and Tali Bers and Thomas Wolf and Alexander M. Rush},
-      year={2021},
-      eprint={2110.08207},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
+@inproceedings{sanh2022multitask,
+    title={Multitask Prompted Training Enables Zero-Shot Task Generalization},
+    author={Victor Sanh and Albert Webson and Colin Raffel and Stephen Bach and Lintang Sutawika and Zaid Alyafeai and Antoine Chaffin and Arnaud Stiegler and Arun Raja and Manan Dey and M Saiful Bari and Canwen Xu and Urmish Thakker and Shanya Sharma Sharma and Eliza Szczechla and Taewoon Kim and Gunjan Chhablani and Nihal Nayak and Debajyoti Datta and Jonathan Chang and Mike Tian-Jian Jiang and Han Wang and Matteo Manica and Sheng Shen and Zheng Xin Yong and Harshit Pandey and Rachel Bawden and Thomas Wang and Trishala Neeraj and Jos Rozen and Abheesht Sharma and Andrea Santilli and Thibault Fevry and Jason Alan Fries and Ryan Teehan and Teven Le Scao and Stella Biderman and Leo Gao and Thomas Wolf and Alexander M Rush},
+    booktitle={International Conference on Learning Representations},
+    year={2022},
+    url={https://openreview.net/forum?id=9Vrb9D0WI4}
 }
 ```
