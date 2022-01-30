@@ -24,7 +24,7 @@ While the codebase in this repository mainly reproduces and replicates the train
 
 Below are the links to the models reported in our paper. We recommend using [the T0++ checkpoint](https://huggingface.co/bigscience/T0pp) as it yields the best performance on the most tasks. Meanwhile, the [T0](https://huggingface.co/bigscience/T0) and [T0+](https://huggingface.co/bigscience/T0p) checkpoints are intended for zero-shot evaluations on held-out tasks. See Sections 3 and 5 of our paper for more details.
 
-If you don’t have enough resources to run T0, a smaller version with 3 billion parameters ([T0 3B](https://huggingface.co/bigscience/T0pp)) is also available. Note that it is trained with same mixture of datasets as T0 (not T0++).
+If you don’t have enough resources to run T0, a smaller version with 3 billion parameters ([T0 3B](https://huggingface.co/bigscience/T0_3B)) is also available. Note that it is trained with the same mixture of datasets as T0 (not T0++).
 
 Lastly, if you want to study the effect of multitask prompted training (a.k.a. instruction tuning) itself, the checkpoints from our ablation studies may be helpful. [T0 Single Prompt](https://huggingface.co/bigscience/T0_single_prompt) trains on one prompt per dataset, while [T0 Original Task Only](https://huggingface.co/bigscience/T0_original_task_only) trains on an average of 5.7 prompts per datasets (cf. T0 vanilla trains on 8.03 prompts per dataset). Using this series of checkpoints allows you to measure, for example, as you increase the number of prompts per dataset, how the performance on some held-out X increases/decreases or behavior on a linguistic diagnostic set changes. See Section 6.2 of our paper for more details.
 
