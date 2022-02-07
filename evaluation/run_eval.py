@@ -264,6 +264,8 @@ def main():
             target_texts.append(target)
             answer_choices_texts.append(ex_answer_choices)
 
+        bs = len(input_texts)
+        
         tokenized_inputs = tokenizer(
             input_texts,
             padding=padding,
