@@ -23,7 +23,7 @@ setup(
     license="Apache Software License 2.0",
     long_description=readme,
     install_requires=[
-        "promptsource",
+        "promptsource>=0.2.2",
         "accelerate",
         "transformers",
         "torch",
