@@ -23,7 +23,7 @@ setup(
     license="Apache Software License 2.0",
     long_description=readme,
     install_requires=[
-        "promptsource @ git+git://github.com/bigscience-workshop/promptsource@v0.1.0",
+        "promptsource",
         "accelerate",
         "transformers",
         "torch",
