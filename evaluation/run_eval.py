@@ -182,7 +182,7 @@ def main():
 
     # Trim a number of evaluation examples
     if args.debug:
-        raw_datasets = raw_datasets.select(range(100))
+        raw_datasets = raw_datasets.select(range(min(len(raw_datasets),100)))
 
     column_names = raw_datasets.column_names
 
