@@ -84,9 +84,6 @@ class DecoderModel(ModelBase):
         device = batch["input_ids"].device
         _, prefix_length = batch["input_ids"].shape
 
-        _, labels_length = batch["labels"].shape
-        assert labels_length == 1, "Labels has to be a single token"
-
         model_inputs = {
             "input_ids": torch.cat([batch["input_ids"], batch["labels"]], dim=-1),
             "attention_mask": torch.cat([batch["attention_mask"], batch["labels_attention_mask"]], dim=-1),
