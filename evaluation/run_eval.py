@@ -201,9 +201,9 @@ def main():
         )
 
     if args.tokenizer_name:
-        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name, use_fast=not args.use_slow_tokenizer)
+        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name, use_fast=not args.use_slow_tokenizer, padding_side="left")
     elif args.model_name_or_path:
-        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=not args.use_slow_tokenizer)
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=not args.use_slow_tokenizer, padding_side="left")
     else:
         raise ValueError(
             "You are instantiating a new tokenizer from scratch. This is not supported by this script."
@@ -265,8 +265,9 @@ def main():
         tokenized_targets = [
             tokenizer(
                 ans_choi,
-                padding=True,
-                max_length=args.target_max_length,
+                # padding is on the right here.
+                padding=False,
+                max_length=args.max_length,
                 truncation=True,
             )
             for ans_choi in answer_choices_texts
