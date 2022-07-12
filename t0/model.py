@@ -89,9 +89,6 @@ class DecoderModel(ModelBase):
             "attention_mask": torch.cat([batch["attention_mask"], batch["labels_attention_mask"]], dim=-1),
         }
         # Set position ids correctly to take care of padding tokens between inputs_ids and labels
-        # Empty attention_mask is a forbidden value, ie full of zeros.
-        # # TODO @thomasw21 not true when `padding_side="left"`
-        # assert torch.all(model_inputs["attention_mask"][:,0] == 1), "First element in the attention mask should be 1."
         position_ids = torch.maximum(
             torch.cumsum(model_inputs["attention_mask"].to(torch.long), dim=-1) - 1,
             torch.zeros(1, dtype=torch.long, device=device)[None, None]
