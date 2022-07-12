@@ -1,8 +1,0 @@
-{
-    "dataset_name": "super_glue",
-    "dataset_config_name": "cb",
-    "template_name": "GPT-3 style",
-    "evaluation": {
-        "accuracy": 0.39285714285714285
-    }
-}
