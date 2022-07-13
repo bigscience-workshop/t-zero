@@ -145,8 +145,7 @@ def run_template(template_name, prompts, model, tokenizer, raw_datasets, acceler
             args.output_dir,
             *[path.replace(" ", "_") for path in paths if path is not None]
         )
-        # TODO @thomasw21 make sure we don't accidentally overwrite previous jobs
-        os.makedirs(result_dir, exist_ok=False)
+        os.makedirs(result_dir, exist_ok=True)
 
     template = prompts[template_name]
 
