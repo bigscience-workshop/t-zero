@@ -312,7 +312,11 @@ def main():
     if args.dataset_name == "anli":
         raw_datasets = load_dataset(args.dataset_name, split=args.dataset_config_name)
     else:
-        raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
+        # TODO @thomasw21 hack!
+        if args.dataset_config_name == "None":
+            raw_datasets = load_dataset(args.dataset_name, split="validation")
+        else:
+            raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
     #TODO(Victor): enable loading pre-processed dataset from https://huggingface.co/datasets/bigscience/P3
 
     # Trim a number of evaluation examples
