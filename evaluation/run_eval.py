@@ -128,14 +128,7 @@ def parse_args():
         action="store_true",
         help="Activate debug mode and run training only with a subset of data.",
     )
-    parser.add_argument(
-        "--parallelize",
-        action="store_true",
-        help=(
-            "If passed, will call `model.parallelize` which splits the model on all GPUs available when applicable (model parallelism). "
-            "Note that this feature is still experimental in HF Transformers."
-        ),
-    )
+
     args = parser.parse_args()
 
     return args
@@ -221,8 +214,9 @@ def main():
     model = ModelBase.from_config(
         config=config,
         model_name_or_path=args.model_name_or_path,
-        parallelize=args.parallelize
+        max_gpu_memory=args.max_gpu_memory,
     )
+    accelerator.prepare_model(model)
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.

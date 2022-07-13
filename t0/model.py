@@ -27,7 +27,7 @@ class ModelBase(nn.Module):
         raise NotImplementedError
 
 class EncoderDecoderModel(ModelBase):
-    def __init__(self, config, model_name_or_path: Optional[str], parallelize: bool, **kwargs):
+    def __init__(self, config, model_name_or_path: Optional[str], **kwargs):
         """
 
         Args:
@@ -46,11 +46,9 @@ class EncoderDecoderModel(ModelBase):
             )
         else:
             logger.info("Training new model from scratch")
-            self._model = AutoModelForSeq2SeqLM.from_config(config)
-
-        if parallelize:
-            assert torch.cuda.is_available(), "You need at least 1 GPU to call `parallelize` (even though if there is only 1 GPU, there won't be any model parallelism)."
-            self._model.parallelize()
+            self._model = AutoModelForSeq2SeqLM.from_config(
+                config,
+            )
 
 
     def forward(self, batch) -> torch.Tensor:
@@ -78,7 +76,9 @@ class DecoderModel(ModelBase):
             )
         else:
             logger.info("Training new model from scratch")
-            self._model = AutoModelForCausalLM.from_config(config)
+            self._model = AutoModelForCausalLM.from_config(
+                config,
+            )
 
     def forward(self, batch):
         device = batch["input_ids"].device
