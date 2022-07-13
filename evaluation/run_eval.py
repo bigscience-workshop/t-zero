@@ -129,6 +129,10 @@ def parse_args():
 
     args = parser.parse_args()
 
+    # TODO @thomasw21 hack!
+    if args.dataset_config_name == "None":
+        args.dataset_config_name = None
+
     return args
 
 def run_template(template_name, prompts, model, tokenizer, raw_datasets, accelerator, args):
@@ -311,11 +315,7 @@ def main():
     if args.dataset_name == "anli":
         raw_datasets = load_dataset(args.dataset_name, split=args.dataset_config_name)
     else:
-        # TODO @thomasw21 hack!
-        if args.dataset_config_name == "None":
-            raw_datasets = load_dataset(args.dataset_name, split="validation")
-        else:
-            raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
+        raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
     #TODO(Victor): enable loading pre-processed dataset from https://huggingface.co/datasets/bigscience/P3
 
     # Trim a number of evaluation examples
@@ -363,7 +363,7 @@ def main():
     # TODO(Victor): If pulling from pre-processed data, remove this logic.
     prompts = DatasetTemplates(
         f"{args.dataset_name}"
-        if args.dataset_config_name is None
+        if args.dataset_config_name is None or args.dataset_name == "anli"
         else f"{args.dataset_name}/{args.dataset_config_name}"
     )
 
