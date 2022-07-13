@@ -170,7 +170,8 @@ def main():
             args.output_dir,
             *[path.replace(" ", "_") for path in paths if path is not None]
         )
-        os.makedirs(result_dir, exist_ok=True)
+        # TODO @thomasw21 make sure we don't accidentally overwrite previous jobs
+        os.makedirs(result_dir, exist_ok=False)
     accelerator.wait_for_everyone()
 
     # In distributed evaluation, the load_dataset function guarantee that only one local process can concurrently
@@ -359,7 +360,8 @@ def main():
         "dataset_name": args.dataset_name,
         "dataset_config_name": args.dataset_config_name,
         "template_name": args.template_name,
-        "evaluation": eval_metric
+        "evaluation": eval_metric,
+        "arguments": str(args)
     }
     if accelerator.is_main_process:
         if result_dir is not None:
