@@ -359,7 +359,17 @@ def main():
     }
     if accelerator.is_main_process:
         if args.output_dir is not None:
-            with open(os.path.join(args.output_dir, "results.json"), "w") as f:
+            paths = [
+                args.dataset_name,
+                args.dataset_config_name,
+                args.template_name,
+                "results.json"
+            ]
+            filepath = os.path.join(
+                args.output_dir,
+                *[path.replace(" ", "_") for path in paths if path is not None]
+            )
+            with open(filepath, "w") as f:
                 json.dump(results, f, indent=4)
 
 
