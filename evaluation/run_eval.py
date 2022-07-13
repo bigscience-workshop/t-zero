@@ -51,7 +51,6 @@ def parse_args():
     parser.add_argument(
         "--dataset_name",
         type=str,
-        default=None,
         help="The name of the dataset to use (via the datasets library).",
         required=True,
     )
@@ -65,8 +64,7 @@ def parse_args():
         "--template_name",
         type=str,
         default=None,
-        help="The template/prompt name",
-        required=True,
+        help="The template/prompt name. If None, we run all templates.",
     )
     parser.add_argument(
         "--max_length",
@@ -133,30 +131,7 @@ def parse_args():
 
     return args
 
-
-def main():
-    args = parse_args()
-
-    # Initialize the accelerator. We will let the accelerator handle device placement for us.
-    accelerator = Accelerator()
-    # Make one log on every process with the configuration for debugging.
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-        datefmt="%m/%d/%Y %H:%M:%S",
-        level=logging.INFO,
-    )
-    logger.info(accelerator.state)
-
-    # Setup logging, we only want one process per machine to log things on the screen.
-    # accelerator.is_local_main_process is only True for one process per machine.
-    logger.setLevel(logging.INFO if accelerator.is_local_main_process else logging.ERROR)
-    if accelerator.is_local_main_process:
-        datasets.utils.logging.set_verbosity_warning()
-        transformers.utils.logging.set_verbosity_info()
-    else:
-        datasets.utils.logging.set_verbosity_error()
-        transformers.utils.logging.set_verbosity_error()
-
+def run_template(template_name, prompts, model, tokenizer, raw_datasets, accelerator, args):
 
     # Handle the output directory creation
     result_dir = None
@@ -164,7 +139,7 @@ def main():
         paths = [
             args.dataset_name,
             args.dataset_config_name,
-            args.template_name,
+            template_name,
         ]
         result_dir = os.path.join(
             args.output_dir,
@@ -172,75 +147,14 @@ def main():
         )
         # TODO @thomasw21 make sure we don't accidentally overwrite previous jobs
         os.makedirs(result_dir, exist_ok=False)
-    accelerator.wait_for_everyone()
 
-    # In distributed evaluation, the load_dataset function guarantee that only one local process can concurrently
-    # download the dataset.
-    if args.dataset_name is not None:
-        # Downloading and loading a dataset from the hub.
-        if args.dataset_name == "anli":
-            raw_datasets = load_dataset(args.dataset_name, split=args.dataset_config_name)
-        else:
-            raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
-    #TODO(Victor): enable loading pre-processed dataset from https://huggingface.co/datasets/bigscience/P3
+    template = prompts[template_name]
 
-    # Trim a number of evaluation examples
-    if args.debug:
-        raw_datasets = raw_datasets.select(range(min(len(raw_datasets),100)))
-
-    column_names = raw_datasets.column_names
-
-
-    # Load pretrained model and tokenizer
-    #
-    # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
-    # download model & vocab.
-    if args.config_name:
-        config = AutoConfig.from_pretrained(args.config_name)
-    elif args.model_name_or_path:
-        config = AutoConfig.from_pretrained(args.model_name_or_path)
-    else:
-        raise ValueError(
-            "Either `args.config_name` or `args.model_name_or_path` should be provided."
-        )
-
-    if args.tokenizer_name:
-        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name, use_fast=not args.use_slow_tokenizer, padding_side="left")
-    elif args.model_name_or_path:
-        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=not args.use_slow_tokenizer, padding_side="left")
-    else:
-        raise ValueError(
-            "You are instantiating a new tokenizer from scratch. This is not supported by this script."
-            "You can do it from another script, save it, and load it from here, using --tokenizer_name."
-        )
-
-    if tokenizer.pad_token is None:
-        for token in [tokenizer.eos_token, tokenizer.bos_token, tokenizer.sep_token]:
-            if token is not None:
-                tokenizer.pad_token = token
-        if tokenizer.pad_token is None:
-            raise ValueError("Please define a pad token id.")
-
-
-    model = ModelBase.from_config(
-        config=config,
-        model_name_or_path=args.model_name_or_path
-    )
-    accelerator.prepare_model(model)
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
     padding = "max_length" if args.pad_to_max_length else False
-
-    # Get the prompt to apply and the possible targets.
-    # TODO(Victor): If pulling from pre-processed data, remove this logic.
-    prompts = DatasetTemplates(
-        f"{args.dataset_name}"
-        if args.dataset_config_name is None
-        else f"{args.dataset_name}/{args.dataset_config_name}"
-    )
-    template = prompts[args.template_name]
-
+    column_names = raw_datasets.column_names
     def preprocess_function(examples):
         bs = len(examples[column_names[0]])
 
@@ -327,7 +241,6 @@ def main():
     # Prepare everything with our `accelerator`.
     eval_dataloader = accelerator.prepare(eval_dataloader)
 
-
     # Metrics
     metric = load_metric("accuracy")
 
@@ -368,6 +281,104 @@ def main():
             with open(os.path.join(result_dir, "results.json"), "w") as f:
                 json.dump(results, f, indent=2)
 
+def main():
+    args = parse_args()
+
+    # Initialize the accelerator. We will let the accelerator handle device placement for us.
+    accelerator = Accelerator()
+    # Make one log on every process with the configuration for debugging.
+    logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+        datefmt="%m/%d/%Y %H:%M:%S",
+        level=logging.INFO,
+    )
+    logger.info(accelerator.state)
+
+    # Setup logging, we only want one process per machine to log things on the screen.
+    # accelerator.is_local_main_process is only True for one process per machine.
+    logger.setLevel(logging.INFO if accelerator.is_local_main_process else logging.ERROR)
+    if accelerator.is_local_main_process:
+        datasets.utils.logging.set_verbosity_warning()
+        transformers.utils.logging.set_verbosity_info()
+    else:
+        datasets.utils.logging.set_verbosity_error()
+        transformers.utils.logging.set_verbosity_error()
+
+    accelerator.wait_for_everyone()
+
+    # In distributed evaluation, the load_dataset function guarantee that only one local process can concurrently
+    # download the dataset.
+    # Downloading and loading a dataset from the hub.
+    if args.dataset_name == "anli":
+        raw_datasets = load_dataset(args.dataset_name, split=args.dataset_config_name)
+    else:
+        raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
+    #TODO(Victor): enable loading pre-processed dataset from https://huggingface.co/datasets/bigscience/P3
+
+    # Trim a number of evaluation examples
+    if args.debug:
+        raw_datasets = raw_datasets.select(range(min(len(raw_datasets),100)))
+
+    # Load pretrained model and tokenizer
+    #
+    # In distributed training, the .from_pretrained methods guarantee that only one local process can concurrently
+    # download model & vocab.
+    if args.config_name:
+        config = AutoConfig.from_pretrained(args.config_name)
+    elif args.model_name_or_path:
+        config = AutoConfig.from_pretrained(args.model_name_or_path)
+    else:
+        raise ValueError(
+            "Either `args.config_name` or `args.model_name_or_path` should be provided."
+        )
+
+    if args.tokenizer_name:
+        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name, use_fast=not args.use_slow_tokenizer, padding_side="left")
+    elif args.model_name_or_path:
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=not args.use_slow_tokenizer, padding_side="left")
+    else:
+        raise ValueError(
+            "You are instantiating a new tokenizer from scratch. This is not supported by this script."
+            "You can do it from another script, save it, and load it from here, using --tokenizer_name."
+        )
+
+    if tokenizer.pad_token is None:
+        for token in [tokenizer.eos_token, tokenizer.bos_token, tokenizer.sep_token]:
+            if token is not None:
+                tokenizer.pad_token = token
+        if tokenizer.pad_token is None:
+            raise ValueError("Please define a pad token id.")
+
+
+    model = ModelBase.from_config(
+        config=config,
+        model_name_or_path=args.model_name_or_path
+    )
+    model = accelerator.prepare_model(model)
+
+    # Get the prompt to apply and the possible targets.
+    # TODO(Victor): If pulling from pre-processed data, remove this logic.
+    prompts = DatasetTemplates(
+        f"{args.dataset_name}"
+        if args.dataset_config_name is None
+        else f"{args.dataset_name}/{args.dataset_config_name}"
+    )
+
+    if args.template_name is not None:
+        template_names = [args.template_name]
+    else:
+        template_names = prompts.all_template_names
+
+    for template_name in template_names:
+        run_template(
+            template_name=template_name,
+            prompts=prompts,
+            model=model,
+            tokenizer=tokenizer,
+            raw_datasets=raw_datasets,
+            accelerator=accelerator,
+            args=args
+        )
 
 if __name__ == "__main__":
     main()
