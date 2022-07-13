@@ -223,8 +223,7 @@ def main():
 
     model = ModelBase.from_config(
         config=config,
-        model_name_or_path=args.model_name_or_path,
-        max_gpu_memory=args.max_gpu_memory,
+        model_name_or_path=args.model_name_or_path
     )
     accelerator.prepare_model(model)
 
