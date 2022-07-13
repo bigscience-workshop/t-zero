@@ -323,11 +323,6 @@ def main():
 
     eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
 
-
-    # Use the device given by the `accelerator` object.
-    if not args.parallelize:
-        model.to(accelerator.device)
-
     # Prepare everything with our `accelerator`.
     eval_dataloader = accelerator.prepare(eval_dataloader)
 
