@@ -135,7 +135,7 @@ def parse_args():
 
     return args
 
-def run_template(template_name, prompts, model, tokenizer, raw_datasets, accelerator, args):
+def run_template(template_name, prompts, model, tokenizer, raw_datasets, accelerator: Accelerator, args):
 
     # Handle the output directory creation
     result_dir = None
@@ -245,7 +245,12 @@ def run_template(template_name, prompts, model, tokenizer, raw_datasets, acceler
     eval_dataloader = accelerator.prepare(eval_dataloader)
 
     # Metrics
-    metric = load_metric("accuracy", experiment_id=f"{args.dataset_name}_{args.dataset_config_name}_{args.template_name}")
+    metric = load_metric(
+        "accuracy",
+        process_id=accelerator.process_index,
+        num_process=accelerator.num_processes,
+        experiment_id=f"{args.dataset_name}_{args.dataset_config_name}_{args.template_name}"
+    )
 
     # Eval!
     total_batch_size = args.per_device_eval_batch_size * accelerator.num_processes
