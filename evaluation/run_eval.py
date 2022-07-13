@@ -159,8 +159,18 @@ def main():
 
 
     # Handle the output directory creation
-    if accelerator.is_main_process:
-        os.makedirs(args.output_dir, exist_ok=True)
+    result_dir = None
+    if args.output_dir is not None and accelerator.is_main_process:
+        paths = [
+            args.dataset_name,
+            args.dataset_config_name,
+            args.template_name,
+        ]
+        result_dir = os.path.join(
+            args.output_dir,
+            *[path.replace(" ", "_") for path in paths if path is not None]
+        )
+        os.makedirs(result_dir, exist_ok=True)
     accelerator.wait_for_everyone()
 
     # In distributed evaluation, the load_dataset function guarantee that only one local process can concurrently
@@ -358,19 +368,9 @@ def main():
         "evaluation": eval_metric
     }
     if accelerator.is_main_process:
-        if args.output_dir is not None:
-            paths = [
-                args.dataset_name,
-                args.dataset_config_name,
-                args.template_name,
-                "results.json"
-            ]
-            filepath = os.path.join(
-                args.output_dir,
-                *[path.replace(" ", "_") for path in paths if path is not None]
-            )
-            with open(filepath, "w") as f:
-                json.dump(results, f, indent=4)
+        if result_dir is not None:
+            with open(os.path.join(result_dir, "results.json"), "w") as f:
+                json.dump(results, f, indent=2)
 
 
 if __name__ == "__main__":
