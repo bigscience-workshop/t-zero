@@ -242,7 +242,7 @@ def run_template(template_name, prompts, model, tokenizer, raw_datasets, acceler
     eval_dataloader = accelerator.prepare(eval_dataloader)
 
     # Metrics
-    metric = load_metric("accuracy")
+    metric = load_metric("accuracy", experiment_id=str(args))
 
     # Eval!
     total_batch_size = args.per_device_eval_batch_size * accelerator.num_processes
