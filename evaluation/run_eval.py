@@ -272,7 +272,7 @@ def run_template(template_name, prompts, model, tokenizer, raw_datasets, acceler
     results = {
         "dataset_name": args.dataset_name,
         "dataset_config_name": args.dataset_config_name,
-        "template_name": args.template_name,
+        "template_name": template_name,
         "evaluation": eval_metric,
         "arguments": str(args)
     }

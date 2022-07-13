@@ -33,7 +33,7 @@ Lastly, if you want to study the effect of multitask prompted training (a.k.a. i
 - T-Zero ++: https://huggingface.co/bigscience/T0pp
 - T-Zero Single Prompt: https://huggingface.co/bigscience/T0_single_prompt
 - T-Zero Original Task Only: https://huggingface.co/bigscience/T0_original_task_only
-- T-Zero 3B: https://huggingface.co/bigscience/T0_3B
+- T-Zero 3B: https://huggingface.co/bigscience/T0_3Bx§
 
 ## Citation
 
