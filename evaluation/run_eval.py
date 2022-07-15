@@ -138,6 +138,8 @@ def parse_args():
     # TODO @thomasw21 hack!
     if args.dataset_config_name == "None":
         args.dataset_config_name = None
+    if args.template_config_name == "None":
+        args.template_config_name = None
 
     return args
 
