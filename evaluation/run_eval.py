@@ -155,7 +155,7 @@ def run_template(template_name, prompts, model, tokenizer, raw_datasets, acceler
         ]
         result_dir = os.path.join(
             args.output_dir,
-            *[path.replace(" ", "_") for path in paths if path is not None]
+            *[path.replace(" ", "_").replace("/", "_") for path in paths if path is not None]
         )
         os.makedirs(result_dir, exist_ok=True)
 
