@@ -248,13 +248,24 @@ def main():
                 k: examples[k][i]
                 for k in column_names
             }
-            input, target = template.apply(ex)
+            # input, target = template.apply(ex)
+
+            ### Fix bug for several templates for super_glue/copa.
+            outputs = template.apply(ex)
+            if len(outputs) == 2:
+                input, target = outputs
+            else:
+                assert (len(outputs) == 1 and len(outputs[0]) == 0)
+                continue
+
             ex_answer_choices = template.get_answer_choices_list(ex)
             assert target in ex_answer_choices
             input_texts.append(input)
             target_texts.append(target)
             answer_choices_texts.append(ex_answer_choices)
 
+        bs = len(input_texts)
+        
         tokenized_inputs = tokenizer(
             input_texts,
             padding=padding,
