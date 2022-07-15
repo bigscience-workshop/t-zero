@@ -61,6 +61,12 @@ def parse_args():
         help="The configuration name of the dataset to use (via the datasets library).",
     )
     parser.add_argument(
+        "--template_config_name",
+        type=str,
+        default=None,
+        help="The name of the dataset_config_name of the template we want to use, example: use XNLI En prompts for XNLI Fr",
+    )
+    parser.add_argument(
         "--template_name",
         type=str,
         default=None,
@@ -366,10 +372,16 @@ def main():
 
     # Get the prompt to apply and the possible targets.
     # TODO(Victor): If pulling from pre-processed data, remove this logic.
+
+    if args.dataset_config_name is None or args.template_config_name is None or args.dataset_name == "anli":
+        prompt_dataset_name = f"{args.dataset_name}"
+    elif args.template_config_name is not None:
+        prompt_dataset_name = f"{args.dataset_name}/{args.template_config_name}"
+    else:
+        prompt_dataset_name = f"{args.dataset_name}/{args.dataset_config_name}"
+
     prompts = DatasetTemplates(
-        f"{args.dataset_name}"
-        if args.dataset_config_name is None or args.dataset_name == "anli"
-        else f"{args.dataset_name}/{args.dataset_config_name}"
+        prompt_dataset_name
     )
 
     if args.template_name is not None:
