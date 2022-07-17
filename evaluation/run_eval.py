@@ -375,7 +375,7 @@ def main():
     # Get the prompt to apply and the possible targets.
     # TODO(Victor): If pulling from pre-processed data, remove this logic.
 
-    if args.dataset_config_name is None or args.template_config_name is None or args.dataset_name == "anli":
+    if (args.dataset_config_name is None and args.template_config_name is None) or args.dataset_name == "anli":
         prompt_dataset_name = f"{args.dataset_name}"
     elif args.template_config_name is not None:
         prompt_dataset_name = f"{args.dataset_name}/{args.template_config_name}"
