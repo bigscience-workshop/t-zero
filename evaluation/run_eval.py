@@ -159,6 +159,10 @@ def run_template(template_name, prompts, model, tokenizer, raw_datasets, acceler
         )
         os.makedirs(result_dir, exist_ok=True)
 
+        if os.path.exists(os.path.join(result_dir, "results.json")):
+            accelerator.print(f"Skipping as result file exists.")           
+            return
+
     template = prompts[template_name]
 
 
@@ -177,9 +181,15 @@ def run_template(template_name, prompts, model, tokenizer, raw_datasets, acceler
                 k: examples[k][i]
                 for k in column_names
             }
-            input, target = template.apply(ex)
+            applied = template.apply(ex)
+            assert len(applied) == 2, f"Incompatible template: {template_name}"
+            input, target = applied
+
+            if isinstance(target, list):
+                assert len(target) == 1, f"Got multiple targets: {target}"
+                target = target[0]
             ex_answer_choices = template.get_answer_choices_list(ex)
-            assert target in ex_answer_choices
+            assert target in ex_answer_choices, f"Expected {target} in {ex_answer_choices}"
             input_texts.append(input)
             target_texts.append(target)
             answer_choices_texts.append(ex_answer_choices)
@@ -329,6 +339,10 @@ def main():
         raw_datasets = load_dataset(args.dataset_name, split=args.dataset_config_name)
     else:
         raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
+
+        # Story_cloze
+        #raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation", data_dir="/gpfsscratch/rech/six/commun/experiments/muennighoff/tr13f-6B3-ml-t0/story_cloze")
+
     #TODO(Victor): enable loading pre-processed dataset from https://huggingface.co/datasets/bigscience/P3
 
     # Trim a number of evaluation examples
