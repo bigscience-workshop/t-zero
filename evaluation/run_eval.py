@@ -273,7 +273,7 @@ def run_template(template_name, prompts, model, tokenizer, raw_datasets, acceler
         "accuracy",
         process_id=accelerator.process_index,
         num_process=accelerator.num_processes,
-        experiment_id=f"{args.dataset_name}_{args.dataset_config_name}_{args.template_name}".replace('/', '_').replace(' ', '_')
+        experiment_id=f"{args.dataset_name}_{args.dataset_config_name}_{args.template_name}_{str(random.randint(0,999))}".replace('/', '_').replace(' ', '_')
     )
 
     # Eval!
