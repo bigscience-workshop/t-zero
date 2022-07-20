@@ -350,9 +350,6 @@ def main():
     else:
         raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
 
-        # Story_cloze
-        #raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation", data_dir="/gpfsscratch/rech/six/commun/experiments/muennighoff/tr13f-6B3-ml-t0/story_cloze")
-
     #TODO(Victor): enable loading pre-processed dataset from https://huggingface.co/datasets/bigscience/P3
 
     # Trim a number of evaluation examples
