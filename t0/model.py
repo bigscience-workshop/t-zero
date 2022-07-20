@@ -65,6 +65,21 @@ class EncoderDecoderModel(ModelBase):
         predictions = seq_log_prob.argmax(dim=-1)
         return predictions
 
+def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: int = None):
+    """
+    Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
+    """
+    batch_size, source_length = mask.size()
+    tgt_len = tgt_len if tgt_len is not None else source_length
+
+    expanded_mask = mask[:, None, None, :].expand(batch_size, 1, tgt_len, source_length).to(dtype)
+
+    inverted_mask = 1.0 - expanded_mask
+
+    return inverted_mask.masked_fill(inverted_mask.to(torch.bool), -torch.inf)
+
+
+
 class DecoderModel(ModelBase):
     def __init__(self, config, model_name_or_path: Optional[str], **kwargs):
         super(DecoderModel, self).__init__()
@@ -80,9 +95,9 @@ class DecoderModel(ModelBase):
                 config,
             )
 
-    def forward(self, batch):
+    def forward(self, batch, prefixlm=False):
         device = batch["input_ids"].device
-        _, prefix_length = batch["input_ids"].shape
+        bs, prefix_len = batch["input_ids"].shape
 
         model_inputs = {
             "input_ids": torch.cat([batch["input_ids"], batch["labels"]], dim=-1),
@@ -94,8 +109,23 @@ class DecoderModel(ModelBase):
             torch.zeros(1, dtype=torch.long, device=device)[None, None]
         )
         model_inputs["position_ids"] = position_ids
+        if prefixlm:
+            bs, lab_len = batch["labels"].shape
+            device = model_inputs["attention_mask"].device
+            dtype = torch.float32
 
-        logits = self._model(**model_inputs).logits[:, prefix_length-1:-1]
+            # Get mask for input & target padding
+            mask = _expand_mask(model_inputs["attention_mask"], dtype)
+
+            # Create causal mask for targets
+            labels_causal_mask = (1 - torch.tril(torch.ones((bs, 1, lab_len, lab_len), device=device, dtype=dtype)))
+            labels_causal_mask = torch.cat([torch.ones((bs,1,prefix_len,lab_len), device=device, dtype=dtype),labels_causal_mask], dim=-2)
+
+            # Add causal mask for targets & let inputs attend bidirectionally
+            mask[:, :, :, prefix_len:] += labels_causal_mask.masked_fill(labels_causal_mask.to(torch.bool), -torch.inf)
+            model_inputs["causal_mask"] = mask
+
+        logits = self._model(**model_inputs).logits[:, prefix_len-1:-1]
         masked_log_probs = batch["labels_attention_mask"].unsqueeze(-1) * torch.log_softmax(logits, dim=-1)
         seq_token_log_probs = torch.gather(masked_log_probs, -1, batch["labels"].unsqueeze(-1))
         seq_log_prob = seq_token_log_probs.squeeze(dim=-1).sum(dim=-1)

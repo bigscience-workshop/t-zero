@@ -45,6 +45,7 @@ from t0.model import ModelBase
 
 logger = logging.getLogger(__name__)
 
+STORY_CLOZE_DIR = "/gpfsscratch/rech/six/commun/experiments/muennighoff/tr13f-6B3-ml-t0/story_cloze"
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Reproduce main evaluation in T0.")
@@ -131,6 +132,11 @@ def parse_args():
         "--debug",
         action="store_true",
         help="Activate debug mode and run training only with a subset of data.",
+    )
+    parser.add_argument(
+        "--prefixlm",
+        action="store_true",
+        help="Use prefix language model.",
     )
 
     args = parser.parse_args()
@@ -267,7 +273,7 @@ def run_template(template_name, prompts, model, tokenizer, raw_datasets, acceler
         "accuracy",
         process_id=accelerator.process_index,
         num_process=accelerator.num_processes,
-        experiment_id=f"{args.dataset_name}_{args.dataset_config_name}_{args.template_name}"
+        experiment_id=f"{args.dataset_name}_{args.dataset_config_name}_{args.template_name}".replace('/', '_').replace(' ', '_')
     )
 
     # Eval!
@@ -283,7 +289,7 @@ def run_template(template_name, prompts, model, tokenizer, raw_datasets, acceler
     model.eval()
     for batch in eval_dataloader:
         with torch.no_grad():
-            predictions = model(batch)
+            predictions = model(batch, prefixlm=args.prefixlm)
 
         metric.add_batch(
             predictions=accelerator.gather(predictions),
@@ -337,6 +343,10 @@ def main():
     # Downloading and loading a dataset from the hub.
     if args.dataset_name == "anli":
         raw_datasets = load_dataset(args.dataset_name, split=args.dataset_config_name)
+    elif args.dataset_name.lower() == "Muennighoff/xwinograd".lower():
+        raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="test")
+    elif args.dataset_name.lower() == "story_cloze".lower():   
+        raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation", data_dir=STORY_CLOZE_DIR)
     else:
         raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
 
