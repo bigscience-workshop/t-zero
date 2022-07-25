@@ -45,7 +45,8 @@ from t0.model import ModelBase
 
 logger = logging.getLogger(__name__)
 
-STORY_CLOZE_DIR = "/gpfsscratch/rech/six/commun/experiments/muennighoff/tr13f-6B3-ml-t0/story_cloze"
+STORY_CLOZE_DIR = "/gpfswork/rech/six/commun/code/tr13f-6B3-ml-t0/story_cloze"
+XSTORY_CLOZE_DIR = "/gpfswork/rech/six/commun/code/tr13f-6B3-ml-t0/xstory_cloze_data"
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Reproduce main evaluation in T0.")
@@ -347,6 +348,8 @@ def main():
         raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="test")
     elif args.dataset_name.lower() == "story_cloze".lower():   
         raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation", data_dir=STORY_CLOZE_DIR)
+    elif "xstory_cloze".lower() in args.dataset_name.lower():
+        raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation", data_dir=XSTORY_CLOZE_DIR)
     else:
         raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
 
