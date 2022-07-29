@@ -175,6 +175,9 @@ def main():
     if args.dataset_name is not None:
         # Downloading and loading a dataset from the hub.
         if args.dataset_name == "anli":
+            error_message = "For ANLI, `dataset_config_name` should be either `dev_r1`, `dev_r2` or `dev_r3`."
+            assert args.dataset_config_name is not None, error_message
+            assert args.dataset_config_name in ["dev_r1", "dev_r2", "dev_r3"], error_message
             raw_datasets = load_dataset(args.dataset_name, split=args.dataset_config_name)
         else:
             raw_datasets = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
