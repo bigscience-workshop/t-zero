@@ -1,5 +1,10 @@
 # T-Zero
 
+<p>
+<a href="https://console.tiyaro.ai/explore?q=bigscience/T0&pub=bigscience"> <img src="https://tiyaro-public-docs.s3.us-west-2.amazonaws.com/assets/try_on_tiyaro_badge.svg"></a>
+</p>
+
+
 This repository serves primarily as codebase and instructions for training, evaluation and inference of T0.
 
 T0 is the model developed in [Multitask Prompted Training Enables Zero-Shot Task Generalization](https://arxiv.org/abs/2110.08207). In this paper, we demonstrate that massive multitask prompted fine-tuning is extremely effective to obtain task zero-shot generalization. T0 outperforms or matches GPT-3 while being 16x smaller.
