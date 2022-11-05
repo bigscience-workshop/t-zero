@@ -9,7 +9,7 @@ setup(
     url='https://github.com/bigscience-workshop/t-zero.git',
     author='Multiple Authors',
     author_email='xxx',
-    python_requires='>=3.7, <3.8', # TODO: update when https://github.com/bigscience-workshop/promptsource/issues/584 is fixed
+    python_requires='>=3.7, <3.10', # TODO: update when https://github.com/bigscience-workshop/promptsource/issues/584 is fixed
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -23,7 +23,7 @@ setup(
     license="Apache Software License 2.0",
     long_description=readme,
     install_requires=[
-        "promptsource==0.1.0",
+        "promptsource==0.2.3",
         "accelerate",
         "transformers",
         "torch",
