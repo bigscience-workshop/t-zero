@@ -24,7 +24,7 @@ setup(
     long_description=readme,
     install_requires=[
         "promptsource==0.2.3",
-        "datasets==2.6.1",
+        "datasets>=2.0.0",
         "accelerate",
         "transformers",
         "torch",
